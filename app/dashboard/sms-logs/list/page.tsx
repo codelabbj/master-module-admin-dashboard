@@ -379,11 +379,18 @@ export default function SmsLogsListPage() {
                   {filteredLogs.map((log, index) => (
                     <TableRow key={log.id || index} className="hover:bg-accent/50">
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-mono text-sm text-foreground">
-                            {log.phone_number || log.phone || log.recipient || "N/A"}
-                          </span>
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-mono text-sm text-foreground">
+                              {log.sender ||log.phone_number || log.phone || log.recipient || "N/A"}
+                            </span>
+                          </div>
+                          {/* {log.sender && (
+                            <span className="text-xs font-mono text-muted-foreground">
+                              Sender: {log.sender}
+                            </span>
+                          )} */}
                         </div>
                       </TableCell>
                       <TableCell>
