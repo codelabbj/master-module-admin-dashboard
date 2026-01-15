@@ -745,7 +745,7 @@ const translations = {
     "signIn.secureLogin": "Secure Login",
     "signIn.accessDashboard": "Access your admin dashboard",
     "signIn.sslSecure": "Secure connection with SSL encryption",
-    "signIn.copyright": "© 2024 Pal Module. All rights reserved.",
+    "signIn.copyright": "© 2024 Flashpay Module. All rights reserved.",
   },
   fr: {
     // Auth
@@ -1483,7 +1483,7 @@ const translations = {
     "signIn.secureLogin": "Connexion Sécurisée",
     "signIn.accessDashboard": "Accédez à votre tableau de bord administrateur",
     "signIn.sslSecure": "Connexion sécurisée par chiffrement SSL",
-    "signIn.copyright": "© 2024 Pal Module. Tous droits réservés.",
+    "signIn.copyright": "© 2024 Flashpay Module. Tous droits réservés.",
 
     // "users.phoneUnverifiedSuccessfully": "Phone unverified successfully",
     "users.partnerToggled": "Partner status updated",

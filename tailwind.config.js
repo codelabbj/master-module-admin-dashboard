@@ -77,7 +77,7 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Custom minimalist palette
+        // Custom minimalist Flashpayette
         neutral: {
           50: "#fafafa",
           100: "#f5f5f5",

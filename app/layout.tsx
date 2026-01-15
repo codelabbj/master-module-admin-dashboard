@@ -9,8 +9,8 @@ import { WebSocketProviderWrapper } from "@/components/providers/websocket-provi
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Pal Module - Admin Dashboard",
-  description: "Professional admin dashboard for Pal Module",
+  title: "Flashpayshpay Module - Admin Dashboard",
+  description: "Professional admin dashboard for Flashpayshpayshpay Module",
     // generator: 'v0.dev'
 }
 

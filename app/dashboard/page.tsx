@@ -204,7 +204,7 @@ interface WaveBusinessStats {
   confirmation_rate: number
 }
 
-// Ultra-minimalist color palette
+// Ultra-minimalist color Flashpayette
 const COLORS = {
   primary: '#00A86B',
   secondary: '#6B7280',

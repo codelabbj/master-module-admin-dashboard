@@ -213,7 +213,7 @@ export function Sidebar() {
                 <span className="text-primary-foreground font-bold text-sm">BP</span>
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-foreground">Pal Module</h1>
+                <h1 className="text-lg font-semibold text-foreground">Flashpay Module</h1>
                 <p className="text-xs text-muted-foreground">Admin Dashboard</p>
               </div>
             </div>
@@ -250,7 +250,7 @@ export function Sidebar() {
                 <span className="text-primary-foreground font-bold text-sm">BP</span>
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-foreground">Pal Module</h1>
+                <h1 className="text-lg font-semibold text-foreground">Flashpay Module</h1>
                 <p className="text-xs text-muted-foreground">Admin Dashboard</p>
               </div>
             </div>

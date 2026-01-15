@@ -126,7 +126,7 @@ export function SignInForm() {
           {/* <div className="flex justify-center items-center mb-6">
             <div className="flex items-center space-x-3">
               <div className="relative">
-                <img src="/logo.png" alt="Pal Module Logo" className="h-12 w-12" />
+                <img src="/logo.png" alt="Flashpay Module Logo" className="h-12 w-12" />
                 <div className="absolute -top-1 -right-1">
                   <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center">
                     <Sparkles className="h-3 w-3 text-white" />
@@ -135,7 +135,7 @@ export function SignInForm() {
               </div>
               <div className="text-left">
                 <h1 className="text-2xl font-bold text-gradient">
-                  Pal Module
+                  Flashpay Module
                 </h1>
                 <p className="text-sm text-muted-foreground">
                   Admin Dashboard
@@ -164,7 +164,7 @@ export function SignInForm() {
             </div>
             <div className="text-center space-y-2">
               <CardTitle className="text-2xl font-bold text-foreground">
-              Pal Module
+              Flashpay Module
               </CardTitle>
               <CardDescription className="text-muted-foreground">
                 Connectez-vous avec vos identifiants administrateur
@@ -280,7 +280,7 @@ export function SignInForm() {
             <span>Connexion sécurisée par chiffrement SSL</span>
           </div>
           <div className="text-xs text-muted-foreground">
-            © 2025 Pal Module. Tous droits réservés.
+            © 2025 Flashpay Module. Tous droits réservés.
           </div>
         </div> */}
       </div>
