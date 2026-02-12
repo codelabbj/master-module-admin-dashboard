@@ -8,11 +8,11 @@ import { Switch } from "@/components/ui/switch"
 import { useApi } from "@/lib/useApi"
 import { useLanguage } from "@/components/providers/language-provider"
 import { useToast } from "@/hooks/use-toast"
-import { 
-  Users, 
-  DollarSign, 
-  Activity, 
-  TrendingUp, 
+import {
+  Users,
+  DollarSign,
+  Activity,
+  TrendingUp,
   ArrowUpRight,
   ArrowDownRight,
   Eye,
@@ -43,13 +43,13 @@ import {
   TrendingDown
 } from "lucide-react"
 import { ErrorDisplay } from "@/components/ui/error-display"
-import { 
-  LineChart as RechartsLineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  LineChart as RechartsLineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   BarChart,
   Bar,
@@ -206,7 +206,7 @@ interface WaveBusinessStats {
 
 // Ultra-minimalist color Flashpayette
 const COLORS = {
-  primary: '#00A86B',
+  primary: 'hsl(var(--primary))',
   secondary: '#6B7280',
   accent: '#F3F4F6',
   success: '#10B981',
@@ -215,7 +215,7 @@ const COLORS = {
   info: '#3B82F6',
 }
 
-const CHART_COLORS = ['#00A86B', '#10B981', '#3B82F6', '#EF4444', '#8B5CF6', '#F59E0B', '#06B6D4', '#84CC16']
+const CHART_COLORS = ['hsl(var(--primary))', '#10B981', '#3B82F6', '#EF4444', '#8B5CF6', '#F59E0B', '#06B6D4', '#84CC16']
 
 export default function Dashboard() {
   const [showOnlyActiveUsers, setShowOnlyActiveUsers] = useState(false)
@@ -237,10 +237,10 @@ export default function Dashboard() {
 
   // Helper function to add timeout to API calls
   const apiWithTimeout = async (url: string, timeoutMs: number = 10000) => {
-    const timeoutPromise = new Promise((_, reject) => 
+    const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
     )
-    
+
     return Promise.race([
       api(url),
       timeoutPromise
@@ -256,7 +256,7 @@ export default function Dashboard() {
         if (attempt === maxRetries) {
           throw error
         }
-        
+
         // Exponential backoff: wait 1s, then 2s, then 4s
         const delay = Math.pow(2, attempt) * 1000
         console.log(`API call failed, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1})`)
@@ -269,7 +269,7 @@ export default function Dashboard() {
     try {
       setIsLoading(true)
       setError(null)
-      
+
       // Check if baseUrl is set
       if (!baseUrl) {
         console.error('NEXT_PUBLIC_API_BASE_URL is not set')
@@ -343,12 +343,12 @@ export default function Dashboard() {
 
       if (failures.length > 0) {
         console.warn(`${failures.length} API calls failed:`, failures.map(f => f.reason))
-        
+
         // Check if failures are due to timeout
-        const timeoutFailures = failures.filter(f => 
+        const timeoutFailures = failures.filter(f =>
           f.reason?.message?.includes('Request timeout')
         )
-        
+
         if (timeoutFailures.length > 0) {
           console.warn(`${timeoutFailures.length} API calls timed out`)
           toast({
@@ -357,7 +357,7 @@ export default function Dashboard() {
             variant: "destructive",
           })
         }
-        
+
         // If all API calls failed, show demo data
         if (failures.length === 8) {
           console.log('All API calls failed, showing demo data')
@@ -398,7 +398,7 @@ export default function Dashboard() {
 
       setIsLoading(false)
     } catch (err) {
-        setError('Échec du chargement des données du tableau de bord')
+      setError('Échec du chargement des données du tableau de bord')
       setIsLoading(false)
       console.error('Dashboard data fetch error:', err)
     }
@@ -457,7 +457,7 @@ export default function Dashboard() {
           </div>
           <div className="h-6 w-32 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(8)].map((_, i) => (
             <Card key={i} className="animate-pulse">
@@ -491,8 +491,8 @@ export default function Dashboard() {
           <p className="text-yellow-800 dark:text-yellow-200">
             Le tableau de bord est en mode démo. Veuillez configurer vos points de terminaison API pour voir les vraies données.
           </p>
-          <Button 
-            onClick={refreshData} 
+          <Button
+            onClick={refreshData}
             className="mt-4"
             variant="outline"
           >
@@ -516,13 +516,13 @@ export default function Dashboard() {
             Aperçus en temps réel des performances de votre plateforme de paiement.
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Eye className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">Afficher seulement les utilisateurs actifs</span>
-            <Switch 
-              checked={showOnlyActiveUsers} 
+            <Switch
+              checked={showOnlyActiveUsers}
               onCheckedChange={setShowOnlyActiveUsers}
             />
           </div>
@@ -535,170 +535,170 @@ export default function Dashboard() {
 
       {/* Dashboard Summary - Today's Performance */}
       {dashboardSummary && (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="hover-lift">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="hover-lift">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Transactions d'Aujourd'hui</p>
                   <p className="text-2xl font-bold text-foreground">{dashboardSummary.today_transactions || 0}</p>
-                <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3 text-green-500" />
                     <span className="text-xs text-green-500">{dashboardSummary.today_completed || 0} terminées</span>
+                  </div>
+                </div>
+                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <CreditCard className="h-6 w-6 text-primary" />
                 </div>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <CreditCard className="h-6 w-6 text-primary" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="hover-lift">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
+          <Card className="hover-lift">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Revenus d'Aujourd'hui</p>
                   <p className="text-2xl font-bold text-foreground">{dashboardSummary.today_revenue?.toLocaleString() || '0'} XOF</p>
-                <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1">
                     <TrendingUp className="h-3 w-3 text-green-500" />
                     <span className="text-xs text-green-500">{dashboardSummary.today_success_rate?.toFixed(1) || '0'}% taux de réussite</span>
+                  </div>
+                </div>
+                <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-green-500" />
                 </div>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-green-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="hover-lift">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
+          <Card className="hover-lift">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Appareils en Ligne</p>
                   <p className="text-2xl font-bold text-foreground">{dashboardSummary.online_devices || 0}</p>
-                <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1">
                     <Activity className="h-3 w-3 text-green-500" />
                     <span className="text-xs text-green-500">Actuellement actifs</span>
+                  </div>
+                </div>
+                <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                  <Monitor className="h-6 w-6 text-blue-500" />
                 </div>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                  <Monitor className="h-6 w-6 text-blue-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="hover-lift">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
+          <Card className="hover-lift">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Transactions en Attente</p>
                   <p className="text-2xl font-bold text-foreground">{dashboardSummary.pending_transactions || 0}</p>
-                <div className="flex items-center gap-1">
-                  <Clock className="h-3 w-3 text-yellow-500" />
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3 text-yellow-500" />
                     <span className="text-xs text-yellow-500">En attente de traitement</span>
+                  </div>
                 </div>
-              </div>
-              <div className="h-12 w-12 rounded-xl bg-yellow-500/10 flex items-center justify-center">
+                <div className="h-12 w-12 rounded-xl bg-yellow-500/10 flex items-center justify-center">
                   <Timer className="h-6 w-6 text-yellow-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* User Statistics */}
       {notificationStats?.user_stats && (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="hover-lift">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="hover-lift">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Utilisateurs Totaux</p>
                   <p className="text-2xl font-bold text-foreground">{notificationStats.user_stats.total_users}</p>
-                <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1">
                     <Users className="h-3 w-3 text-blue-500" />
                     <span className="text-xs text-blue-500">Tous les temps</span>
+                  </div>
                 </div>
-              </div>
                 <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
                   <Users className="h-6 w-6 text-blue-500" />
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="hover-lift">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
+          <Card className="hover-lift">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Utilisateurs Actifs</p>
                   <p className="text-2xl font-bold text-foreground">{notificationStats.user_stats.active_users}</p>
-                <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1">
                     <Activity className="h-3 w-3 text-green-500" />
                     <span className="text-xs text-green-500">{notificationStats.user_stats.users_registered_week} cette semaine</span>
+                  </div>
                 </div>
-              </div>
                 <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center">
                   <Activity className="h-6 w-6 text-green-500" />
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="hover-lift">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
+          <Card className="hover-lift">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Utilisateurs Vérifiés</p>
                   <p className="text-2xl font-bold text-foreground">{notificationStats.user_stats.verified_users}</p>
-                <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1">
                     <CheckCircle className="h-3 w-3 text-green-500" />
                     <span className="text-xs text-green-500">Email vérifié</span>
+                  </div>
                 </div>
-              </div>
                 <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center">
                   <Shield className="h-6 w-6 text-green-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover-lift">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">Utilisateurs en Attente</p>
-                  <p className="text-2xl font-bold text-foreground">{notificationStats.user_stats.pending_users}</p>
-                <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3 text-yellow-500" />
-                    <span className="text-xs text-yellow-500">En attente de vérification</span>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="hover-lift">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Utilisateurs en Attente</p>
+                  <p className="text-2xl font-bold text-foreground">{notificationStats.user_stats.pending_users}</p>
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3 text-yellow-500" />
+                    <span className="text-xs text-yellow-500">En attente de vérification</span>
+                  </div>
+                </div>
                 <div className="h-12 w-12 rounded-xl bg-yellow-500/10 flex items-center justify-center">
                   <Clock className="h-6 w-6 text-yellow-500" />
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Transaction Statistics Charts */}
       {transactionStats && (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
                 <PieChart className="h-5 w-5 text-primary" />
                 Distribution du Statut des Transactions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsPieChart>
                     <Pie
@@ -717,19 +717,19 @@ export default function Dashboard() {
                     <Tooltip />
                   </RechartsPieChart>
                 </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
                 <LineChart className="h-5 w-5 text-primary" />
                 Tendances des Transactions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsLineChart data={transactionTrendsData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -740,10 +740,10 @@ export default function Dashboard() {
                     <Line type="monotone" dataKey="revenue" stroke="#3B82F6" strokeWidth={2} />
                   </RechartsLineChart>
                 </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Transaction Overview */}
@@ -761,7 +761,7 @@ export default function Dashboard() {
                 <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
                   <p className="text-2xl font-bold text-green-600">{transactionStats.success_transactions}</p>
                   <p className="text-sm text-green-600">Réussies</p>
-                  </div>
+                </div>
                 <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
                   <p className="text-2xl font-bold text-red-600">{transactionStats.failed_transactions}</p>
                   <p className="text-sm text-red-600">Échouées</p>
@@ -770,7 +770,7 @@ export default function Dashboard() {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Montant Total</span>
-                    <span className="font-semibold">{parseFloat(transactionStats.total_amount || '0').toLocaleString()} XOF</span>
+                  <span className="font-semibold">{parseFloat(transactionStats.total_amount || '0').toLocaleString()} XOF</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Taux de Réussite</span>
@@ -778,11 +778,11 @@ export default function Dashboard() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Dépôts</span>
-                    <span className="font-semibold">{parseFloat(transactionStats.deposits_amount || '0').toLocaleString()} XOF</span>
+                  <span className="font-semibold">{parseFloat(transactionStats.deposits_amount || '0').toLocaleString()} XOF</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Retraits</span>
-                    <span className="font-semibold">{parseFloat(transactionStats.withdrawals_amount || '0').toLocaleString()} XOF</span>
+                  <span className="font-semibold">{parseFloat(transactionStats.withdrawals_amount || '0').toLocaleString()} XOF</span>
                 </div>
               </div>
             </div>
@@ -794,15 +794,15 @@ export default function Dashboard() {
       {momoPayStats && waveBusinessStats && (
         <div className="space-y-6">
           {/* Payment Provider Comparison Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5 text-primary" />
                 Comparaison des Fournisseurs de Paiement
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={paymentProviderData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -813,30 +813,30 @@ export default function Dashboard() {
                     <Bar dataKey="confirmed" fill="#10B981" name="Confirmées" />
                   </BarChart>
                 </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Individual Provider Stats */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
                   <Smartphone className="h-5 w-5 text-primary" />
                   Performance MoMo Pay
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                       <p className="text-2xl font-bold text-blue-600">{momoPayStats.total_transactions}</p>
                       <p className="text-sm text-blue-600">Transactions Totales</p>
-                  </div>
+                    </div>
                     <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
                       <p className="text-2xl font-bold text-green-600">{momoPayStats.confirmed_count}</p>
                       <p className="text-sm text-green-600">Confirmées</p>
-                </div>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between">
@@ -852,29 +852,29 @@ export default function Dashboard() {
                       <span className="font-semibold text-yellow-600">{momoPayStats.pending_count}</span>
                     </div>
                   </div>
-            </div>
-          </CardContent>
-        </Card>
+                </div>
+              </CardContent>
+            </Card>
 
             <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
                   <Waves className="h-5 w-5 text-primary" />
                   Performance Wave Business
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                       <p className="text-2xl font-bold text-blue-600">{waveBusinessStats.total_transactions}</p>
                       <p className="text-sm text-blue-600">Transactions Totales</p>
-                      </div>
+                    </div>
                     <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
                       <p className="text-2xl font-bold text-green-600">{waveBusinessStats.confirmed_count}</p>
                       <p className="text-sm text-green-600">Confirmées</p>
-                      </div>
                     </div>
+                  </div>
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Taux de Confirmation</span>
@@ -883,15 +883,15 @@ export default function Dashboard() {
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Montant Total</span>
                       <span className="font-semibold">{(waveBusinessStats.total_amount_confirmed || 0).toLocaleString()} XOF</span>
-                  </div>
+                    </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">En Attente</span>
                       <span className="font-semibold text-yellow-600">{waveBusinessStats.pending_count}</span>
-                </div>
+                    </div>
                   </div>
-            </div>
-          </CardContent>
-        </Card>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       )}
@@ -911,10 +911,9 @@ export default function Dashboard() {
                 systemEvents.results.slice(0, 10).map((event) => (
                   <div key={event.uid} className="flex items-center justify-between p-3 rounded-lg bg-accent/50">
                     <div className="flex items-center gap-3">
-                      <div className={`h-2 w-2 rounded-full ${
-                        event.level === 'error' ? 'bg-red-500' : 
-                        event.level === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
-                      }`} />
+                      <div className={`h-2 w-2 rounded-full ${event.level === 'error' ? 'bg-red-500' :
+                          event.level === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
+                        }`} />
                       <div>
                         <p className="font-medium text-foreground">{event.description}</p>
                         <p className="text-sm text-muted-foreground">
@@ -924,7 +923,7 @@ export default function Dashboard() {
                     </div>
                     <Badge variant={event.level === 'error' ? 'destructive' : 'secondary'}>
                       {event.event_type}
-                      </Badge>
+                    </Badge>
                   </div>
                 ))
               ) : (
@@ -941,41 +940,41 @@ export default function Dashboard() {
       {/* Balance Operations */}
       {balanceOperations && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
                 <DollarIcon className="h-5 w-5 text-primary" />
                 Résumé des Remboursements
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
                 <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
                   <p className="text-2xl font-bold text-red-600">{balanceOperations.refunds?.total_count || 0}</p>
                   <p className="text-sm text-red-600">Remboursements Totaux</p>
-                      </div>
+                </div>
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Montant Total</span>
                     <span className="font-semibold text-red-600">{(balanceOperations.refunds?.total_amount || 0).toLocaleString()} XOF</span>
-                      </div>
+                  </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Période</span>
                     <span className="font-semibold">{balanceOperations.period_days || 0} jours</span>
-                    </div>
-                    </div>
-            </div>
-          </CardContent>
-        </Card>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5 text-primary" />
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5 text-primary" />
                 Résumé des Ajustements
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
               <div className="space-y-4">
                 <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                   <p className="text-2xl font-bold text-blue-600">{balanceOperations.adjustments?.total_count || 0}</p>
@@ -991,35 +990,35 @@ export default function Dashboard() {
                     <span className="font-semibold text-red-600">{balanceOperations.adjustments?.total_debits?.count || 0}</span>
                   </div>
                 </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Recharge Requests */}
       {rechargeRequests && (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-primary" />
               Statistiques des Demandes de Recharge
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               {rechargeRequests.by_status ? Object.entries(rechargeRequests.by_status).map(([key, status]) => (
                 <div key={key} className="text-center p-4 bg-accent/50 rounded-lg">
                   <p className="text-2xl font-bold text-foreground">{status.count || 0}</p>
                   <p className="text-sm text-muted-foreground">{status.name || 'Unknown'}</p>
-              </div>
+                </div>
               )) : (
                 <div className="col-span-full text-center p-8 text-muted-foreground">
                   <CreditCard className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p>Aucune donnée de statut de demande de recharge disponible</p>
-            </div>
+                </div>
               )}
-              </div>
+            </div>
             <div className="mt-4 pt-4 border-t">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Demandes Totales</span>
@@ -1028,10 +1027,10 @@ export default function Dashboard() {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Montant Total Approuvé</span>
                 <span className="font-semibold text-green-600">{(rechargeRequests.total_approved_amount || 0).toLocaleString()} XOF</span>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
       )}
 
       {/* Service Status */}

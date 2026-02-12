@@ -8,10 +8,14 @@ import { WebSocketProviderWrapper } from "@/components/providers/websocket-provi
 
 const inter = Inter({ subsets: ["latin"] })
 
+const appName = process.env.NEXT_PUBLIC_APP_NAME || "Flashpayshpay Module";
+const appTitle = process.env.NEXT_PUBLIC_APP_TITLE || "Flashpayshpay Module - Admin Dashboard";
+const appDescription = process.env.NEXT_PUBLIC_APP_DESCRIPTION || "Professional admin dashboard for Flashpayshpayshpay Module";
+const primaryColor = process.env.NEXT_PUBLIC_PRIMARY_COLOR;
+
 export const metadata: Metadata = {
-  title: "Flashpayshpay Module - Admin Dashboard",
-  description: "Professional admin dashboard for Flashpayshpayshpay Module",
-    // generator: 'v0.dev'
+  title: appTitle,
+  description: appDescription,
 }
 
 export default function RootLayout({
@@ -22,6 +26,20 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
+        {primaryColor && (
+          <style dangerouslySetInnerHTML={{
+            __html: `
+              :root {
+                --primary: ${primaryColor};
+                --ring: ${primaryColor};
+              }
+              .dark {
+                --primary: ${primaryColor};
+                --ring: ${primaryColor};
+              }
+            `
+          }} />
+        )}
         <ThemeProvider>
           <LanguageProvider>
             <WebSocketProviderWrapper>

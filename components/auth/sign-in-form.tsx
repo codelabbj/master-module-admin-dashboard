@@ -12,13 +12,13 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { LanguageSwitcher } from "@/components/ui/language-switcher"
 import { useLanguage } from "@/components/providers/language-provider"
-import { 
-  Eye, 
-  EyeOff, 
-  Mail, 
-  Lock, 
-  Shield, 
-  ArrowRight, 
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  Shield,
+  ArrowRight,
   Sparkles,
   LogIn,
   User,
@@ -40,6 +40,7 @@ export function SignInForm() {
   const [showPassword, setShowPassword] = useState(false)
   const apiFetch = useApi();
   const { toast } = useToast();
+  const appName = process.env.NEXT_PUBLIC_APP_NAME || "Flashpay Module";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -120,7 +121,7 @@ export function SignInForm() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <div className="w-full max-w-md space-y-8">
-        
+
         {/* Header Section */}
         <div className="text-center space-y-6">
           {/* <div className="flex justify-center items-center mb-6">
@@ -143,7 +144,7 @@ export function SignInForm() {
               </div>
             </div>
           </div> */}
-          
+
           <div className="space-y-2">
             <h2 className="text-3xl font-bold text-gradient">
               Bienvenue
@@ -164,17 +165,17 @@ export function SignInForm() {
             </div>
             <div className="text-center space-y-2">
               <CardTitle className="text-2xl font-bold text-foreground">
-              Flashpay Module
+                {appName}
               </CardTitle>
               <CardDescription className="text-muted-foreground">
                 Connectez-vous avec vos identifiants administrateur
               </CardDescription>
             </div>
           </CardHeader>
-          
+
           <CardContent className="space-y-6">
             <form onSubmit={handleSubmit} className="space-y-6">
-              
+
               {/* Email Input */}
               <div className="space-y-3">
                 <Label htmlFor="email" className="text-sm font-medium text-foreground flex items-center space-x-2">
@@ -240,9 +241,9 @@ export function SignInForm() {
               </div>
 
               {/* Submit Button */}
-              <Button 
-                type="submit" 
-                className="w-full py-3 hover-lift" 
+              <Button
+                type="submit"
+                className="w-full py-3 hover-lift"
                 disabled={loading}
               >
                 {loading ? (

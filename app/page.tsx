@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 
+const appName = process.env.NEXT_PUBLIC_APP_NAME || "Flashpay Module"
+
 export default function SignInPage() {
   const router = useRouter()
   const [checking, setChecking] = useState(true)
@@ -34,7 +36,7 @@ export default function SignInPage() {
             </div>
           </div>
           <div className="text-center space-y-2">
-            <h1 className="text-2xl font-bold text-gradient">Flashpay Module</h1>
+            <h1 className="text-2xl font-bold text-gradient">{appName}</h1>
             <p className="text-muted-foreground">Vérification de la session...</p>
           </div>
         </div>

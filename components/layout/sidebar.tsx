@@ -6,13 +6,16 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/components/providers/language-provider"
-import { 
-  BarChart3, Users, CreditCard, LogOut, Menu, X, 
-  ChevronDown, ChevronUp, Globe, Share2, Phone, 
-  Monitor, MessageCircle, Bell, Settings, User, 
-  Home, DollarSign, Waves, Smartphone, Zap 
+import {
+  BarChart3, Users, CreditCard, LogOut, Menu, X,
+  ChevronDown, ChevronUp, Globe, Share2, Phone,
+  Monitor, MessageCircle, Bell, Settings, User,
+  Home, DollarSign, Waves, Smartphone, Zap
 } from "lucide-react"
 import { clearTokens } from "@/lib/api"
+
+const appName = process.env.NEXT_PUBLIC_APP_NAME || "Flashpay Module"
+const appShortName = process.env.NEXT_PUBLIC_APP_SHORT_NAME || "BP"
 
 export function Sidebar() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -22,8 +25,8 @@ export function Sidebar() {
   const { t } = useLanguage()
 
   const toggleExpanded = (item: string) => {
-    setExpandedItems(prev => 
-      prev.includes(item) 
+    setExpandedItems(prev =>
+      prev.includes(item)
         ? prev.filter(i => i !== item)
         : [...prev, item]
     )
@@ -210,10 +213,10 @@ export function Sidebar() {
           <div className="flex h-16 items-center justify-between px-6 border-b border-border/50">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">BP</span>
+                <span className="text-primary-foreground font-bold text-sm">{appShortName}</span>
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-foreground">Flashpay Module</h1>
+                <h1 className="text-lg font-semibold text-foreground">{appName}</h1>
                 <p className="text-xs text-muted-foreground">Admin Dashboard</p>
               </div>
             </div>
@@ -221,13 +224,13 @@ export function Sidebar() {
               <X className="h-4 w-4" />
             </Button>
           </div>
-          
+
           <nav className="flex-1 min-h-0 space-y-2 p-4 overflow-y-auto">
             {navigationItems.map((item) => (
               <NavItem key={item.name} item={item} />
             ))}
           </nav>
-          
+
           <div className="p-4 border-t border-border/50">
             <Button
               variant="ghost"
@@ -247,21 +250,21 @@ export function Sidebar() {
           <div className="flex h-16 items-center px-6 border-b border-border/50">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">BP</span>
+                <span className="text-primary-foreground font-bold text-sm">{appShortName}</span>
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-foreground">Flashpay Module</h1>
+                <h1 className="text-lg font-semibold text-foreground">{appName}</h1>
                 <p className="text-xs text-muted-foreground">Admin Dashboard</p>
               </div>
             </div>
           </div>
-          
+
           <nav className="flex-1 min-h-0 space-y-2 p-4 overflow-y-auto">
             {navigationItems.map((item) => (
               <NavItem key={item.name} item={item} />
             ))}
           </nav>
-          
+
           <div className="p-4 border-t border-border/50">
             <Button
               variant="ghost"
@@ -277,10 +280,10 @@ export function Sidebar() {
 
       {/* Mobile menu button */}
       <div className="lg:hidden">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="fixed top-4 left-4 z-40 bg-background/95 backdrop-blur-xl shadow-elevated border border-border/50" 
+        <Button
+          variant="ghost"
+          size="icon"
+          className="fixed top-4 left-4 z-40 bg-background/95 backdrop-blur-xl shadow-elevated border border-border/50"
           onClick={() => setSidebarOpen(true)}
         >
           <Menu className="h-4 w-4" />

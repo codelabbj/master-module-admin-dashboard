@@ -16,6 +16,8 @@ type LanguageProviderState = {
   t: (key: string) => string
 }
 
+const appName = process.env.NEXT_PUBLIC_APP_NAME || "Flashpay Module"
+
 const translations = {
   en: {
     // Auth
@@ -172,7 +174,7 @@ const translations = {
     "dashboard.approvedAmount": "Approved Amount",
     "dashboard.approvalRate": "Approval Rate",
     "dashboard.byStatus": "By Status",
-    
+
     // (Optional, currently commented in UI)
     // "dashboard.userTaskActivity": "User & Task Activity",
     // "dashboard.users": "Users",
@@ -358,7 +360,7 @@ const translations = {
     "transactions.confirmWithdrawalTitle": "Confirm Withdrawal",
     "transactionLogs.empty": "No transaction logs found.",
     "transactions.cancelled": "Cancelled",
-    
+
 
     // Partner List
     "partners.title": "Partners",
@@ -378,7 +380,7 @@ const translations = {
     "partners.createdAt": "Created At",
     "partners.details": "Details",
     "partners.status": "Status",
-   
+
     "partner.actions": "Actions",
     "partners.active": "Active",
     "partners.inactive": "Inactive",
@@ -415,7 +417,7 @@ const translations = {
     "topup.status": "Status",
     "topup.createdAt": "Created At",
     "topup.actions": "Actions",
-    
+
     "topup.transactionDate": "Transaction Date",
     "topup.proofImage": "Proof Image",
     "topup.viewProof": "View Image",
@@ -441,7 +443,7 @@ const translations = {
     "topup.showingResults": "Showing start to end of total results",
     // Earning Management Page
     "earning.title": "Earning Management",
-    
+
     "earning.list": "Earning List",
     "earning.details": "Earning Details",
     "earning.failedToLoad": "Failed to load earnings",
@@ -698,7 +700,7 @@ const translations = {
     "common.failedToCreate": "Failed to create",
     "common.failedToUpdate": "Failed to update",
     "common.failedToDelete": "Failed to delete",
-    
+
     // Wave Business Transaction
     "waveBusiness.title": "Wave Business Transactions",
     "waveBusiness.subtitle": "Manage and monitor Wave Business transactions",
@@ -740,12 +742,12 @@ const translations = {
     "waveBusiness.copied": "copied!",
     "waveBusiness.copyUid": "Copy UID",
     "waveBusiness.copyReference": "Copy Reference",
-    
+
     // Sign In Form
     "signIn.secureLogin": "Secure Login",
     "signIn.accessDashboard": "Access your admin dashboard",
     "signIn.sslSecure": "Secure connection with SSL encryption",
-    "signIn.copyright": "© 2024 Flashpay Module. All rights reserved.",
+    "signIn.copyright": `© 2024 ${appName}. All rights reserved.`,
   },
   fr: {
     // Auth
@@ -951,7 +953,7 @@ const translations = {
     "users.enterPhone": "Entrez le numéro de téléphone",
     "users.sending": "Envoi...",
     "users.verifying": "Vérification...",
-    
+
 
     // Activation/Deactivation
     "users.activate": "Activer",
@@ -1156,7 +1158,7 @@ const translations = {
     "topup.status": "Statut",
     "topup.createdAt": "Créé le",
     "topup.actions": "Actions",
-    
+
     "topup.transactionDate": "Date de transaction",
     "topup.proofImage": "Image de preuve",
     "topup.viewProof": "Voir l'image",
@@ -1436,7 +1438,7 @@ const translations = {
     "common.failedToCreate": "Échec de la création",
     "common.failedToUpdate": "Échec de la mise à jour",
     "common.failedToDelete": "Échec de la suppression",
-    
+
     // Wave Business Transaction
     "waveBusiness.title": "Transactions Wave Business",
     "waveBusiness.subtitle": "Gérer et surveiller les transactions Wave Business",
@@ -1478,12 +1480,12 @@ const translations = {
     "waveBusiness.copied": "copié !",
     "waveBusiness.copyUid": "Copier l'UID",
     "waveBusiness.copyReference": "Copier la référence",
-    
+
     // Sign In Form
     "signIn.secureLogin": "Connexion Sécurisée",
     "signIn.accessDashboard": "Accédez à votre tableau de bord administrateur",
     "signIn.sslSecure": "Connexion sécurisée par chiffrement SSL",
-    "signIn.copyright": "© 2024 Flashpay Module. Tous droits réservés.",
+    "signIn.copyright": `© 2024 ${appName}. Tous droits réservés.`,
 
     // "users.phoneUnverifiedSuccessfully": "Phone unverified successfully",
     "users.partnerToggled": "Partner status updated",
