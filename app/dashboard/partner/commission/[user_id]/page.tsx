@@ -111,7 +111,7 @@ export default function CommissionStatPage({ params }: { params: { user_id: stri
           </div>
           <div className="h-6 w-32 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[...Array(3)].map((_, i) => (
             <Card key={i} className="animate-pulse">
@@ -139,7 +139,7 @@ export default function CommissionStatPage({ params }: { params: { user_id: stri
             Voir et gérer les données de commission des partenaires
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
             <DollarSign className="h-4 w-4 text-primary" />
@@ -201,7 +201,7 @@ export default function CommissionStatPage({ params }: { params: { user_id: stri
                 <Button variant="outline" onClick={() => setModalOpen(false)}>
                   Annuler
                 </Button>
-                <Button 
+                <Button
                   onClick={handlePayCommissionClick}
                   disabled={!amount}
                 >
@@ -232,7 +232,7 @@ export default function CommissionStatPage({ params }: { params: { user_id: stri
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Commissions totales</p>
                     <p className="text-2xl font-bold text-foreground">
-                      {(parseFloat(stats.total_commissions || 0)).toLocaleString()} XOF
+                      {(parseFloat(stats.total_commissions || 0))} XOF
                     </p>
                   </div>
                   <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -247,7 +247,7 @@ export default function CommissionStatPage({ params }: { params: { user_id: stri
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Commissions en attente</p>
                     <p className="text-2xl font-bold text-foreground">
-                      {(parseFloat(stats.pending_commissions || 0)).toLocaleString()} XOF
+                      {(parseFloat(stats.pending_commissions || 0))} XOF
                     </p>
                   </div>
                   <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center">
@@ -324,22 +324,22 @@ export default function CommissionStatPage({ params }: { params: { user_id: stri
                         </div>
                         <div>
                           <p className="font-medium text-foreground">
-                            {(parseFloat(commission.amount || 0)).toLocaleString()} XOF
+                            {(parseFloat(commission.amount || 0))} XOF
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {commission.period_start && commission.period_end ? 
-                              `${new Date(commission.period_start).toLocaleDateString()} - ${new Date(commission.period_end).toLocaleDateString()}` : 
+                            {commission.period_start && commission.period_end ?
+                              `${new Date(commission.period_start).toLocaleDateString()} - ${new Date(commission.period_end).toLocaleDateString()}` :
                               'Période non spécifiée'
                             }
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge 
+                        <Badge
                           variant={
                             commission.status === 'completed' ? "default" :
-                            commission.status === 'pending' ? "secondary" :
-                            "destructive"
+                              commission.status === 'pending' ? "secondary" :
+                                "destructive"
                           }
                         >
                           <div className="flex items-center gap-1">
@@ -392,7 +392,7 @@ export default function CommissionStatPage({ params }: { params: { user_id: stri
               </div>
             )}
             <p className="text-muted-foreground">
-              Êtes-vous sûr de vouloir payer une commission de <span className="font-semibold">{(parseFloat(amount) || 0).toLocaleString()} XOF</span> ?
+              Êtes-vous sûr de vouloir payer une commission de <span className="font-semibold">{(parseFloat(amount) || 0)} XOF</span> ?
             </p>
             <p className="text-sm text-muted-foreground">
               Cette action ne peut pas être annulée et sera enregistrée dans l'historique des commissions.
@@ -402,7 +402,7 @@ export default function CommissionStatPage({ params }: { params: { user_id: stri
             <Button variant="outline" onClick={() => setConfirmModalOpen(false)}>
               Annuler
             </Button>
-            <Button 
+            <Button
               onClick={handleConfirmPay}
               disabled={payLoading}
             >

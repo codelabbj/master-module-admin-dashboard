@@ -559,7 +559,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Revenus d'Aujourd'hui</p>
-                  <p className="text-2xl font-bold text-foreground">{dashboardSummary.today_revenue?.toLocaleString() || '0'} XOF</p>
+                  <p className="text-2xl font-bold text-foreground">{dashboardSummary.today_revenue || '0'} XOF</p>
                   <div className="flex items-center gap-1">
                     <TrendingUp className="h-3 w-3 text-green-500" />
                     <span className="text-xs text-green-500">{dashboardSummary.today_success_rate?.toFixed(1) || '0'}% taux de réussite</span>
@@ -770,7 +770,7 @@ export default function Dashboard() {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Montant Total</span>
-                  <span className="font-semibold">{parseFloat(transactionStats.total_amount || '0').toLocaleString()} XOF</span>
+                  <span className="font-semibold">{Math.round(parseFloat(transactionStats.total_amount || '0'))} XOF</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Taux de Réussite</span>
@@ -778,11 +778,11 @@ export default function Dashboard() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Dépôts</span>
-                  <span className="font-semibold">{parseFloat(transactionStats.deposits_amount || '0').toLocaleString()} XOF</span>
+                  <span className="font-semibold">{Math.round(parseFloat(transactionStats.deposits_amount || '0'))} XOF</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Retraits</span>
-                  <span className="font-semibold">{parseFloat(transactionStats.withdrawals_amount || '0').toLocaleString()} XOF</span>
+                  <span className="font-semibold">{Math.round(parseFloat(transactionStats.withdrawals_amount || '0'))} XOF</span>
                 </div>
               </div>
             </div>
@@ -845,7 +845,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Montant Total</span>
-                      <span className="font-semibold">{(momoPayStats.total_amount_confirmed || 0).toLocaleString()} XOF</span>
+                      <span className="font-semibold">{(momoPayStats.total_amount_confirmed || 0)} XOF</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">En Attente</span>
@@ -882,7 +882,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Montant Total</span>
-                      <span className="font-semibold">{(waveBusinessStats.total_amount_confirmed || 0).toLocaleString()} XOF</span>
+                      <span className="font-semibold">{(waveBusinessStats.total_amount_confirmed || 0)} XOF</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">En Attente</span>
@@ -912,7 +912,7 @@ export default function Dashboard() {
                   <div key={event.uid} className="flex items-center justify-between p-3 rounded-lg bg-accent/50">
                     <div className="flex items-center gap-3">
                       <div className={`h-2 w-2 rounded-full ${event.level === 'error' ? 'bg-red-500' :
-                          event.level === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
+                        event.level === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
                         }`} />
                       <div>
                         <p className="font-medium text-foreground">{event.description}</p>
@@ -956,7 +956,7 @@ export default function Dashboard() {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Montant Total</span>
-                    <span className="font-semibold text-red-600">{(balanceOperations.refunds?.total_amount || 0).toLocaleString()} XOF</span>
+                    <span className="font-semibold text-red-600">{(balanceOperations.refunds?.total_amount || 0)} XOF</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Période</span>
@@ -1026,7 +1026,7 @@ export default function Dashboard() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Montant Total Approuvé</span>
-                <span className="font-semibold text-green-600">{(rechargeRequests.total_approved_amount || 0).toLocaleString()} XOF</span>
+                <span className="font-semibold text-green-600">{(rechargeRequests.total_approved_amount || 0)} XOF</span>
               </div>
             </div>
           </CardContent>

@@ -7,13 +7,16 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useApi } from "@/lib/useApi"
 import { useLanguage } from "@/components/providers/language-provider"
-import { 
-  Search, 
-  Monitor, 
-  Filter, 
+import {
+  Search,
+  Monitor,
+  Filter,
   Download,
   RefreshCw,
-  Eye
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  Copy
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
@@ -38,14 +41,39 @@ export default function DevicesListPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const { lastMessage } = useWebSocket();
   const [selectedDevice, setSelectedDevice] = useState<any>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(id)
+      toast({
+        title: "Copié !",
+        description: "L'identifiant a été copié dans le presse-papiers.",
+      })
+      setTimeout(() => setCopiedId(null), 2000)
+    })
+  }
+
+  const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const itemsPerPage = 20
 
   useEffect(() => {
     const fetchDevices = async () => {
       setLoading(true)
       setError("")
       try {
-        const data = await apiFetch(`${baseUrl}/api/payments/stats/devices/`)
+        const params = new URLSearchParams({
+          page: currentPage.toString(),
+          page_size: itemsPerPage.toString(),
+        })
+        if (searchTerm) params.append("search", searchTerm)
+
+        const data = await apiFetch(`${baseUrl}/api/payments/stats/devices/?${params.toString()}`)
         setDevices(data.results || data || [])
+        setTotalCount(data.count || (Array.isArray(data) ? data.length : 0))
+        setTotalPages(data.total_pages || Math.ceil((data.count || 0) / itemsPerPage) || 1)
+
         toast({
           title: t("devices.loaded") || "Appareils chargés",
           description: t("devices.loadedSuccessfully") || "Liste des appareils chargée avec succès",
@@ -72,8 +100,8 @@ export default function DevicesListPage() {
       try {
         const data = JSON.parse(lastMessage.data)
         if (data.type === 'device_status_update') {
-          setDevices(prev => prev.map(device => 
-            device.id === data.device_id 
+          setDevices(prev => prev.map(device =>
+            device.id === data.device_id
               ? { ...device, is_online: data.is_online, last_seen: data.last_seen }
               : device
           ))
@@ -89,14 +117,14 @@ export default function DevicesListPage() {
 
     if (searchTerm) {
       filtered = filtered.filter(device =>
-        Object.values(device).some(value => 
+        Object.values(device).some(value =>
           value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
         )
       )
     }
 
     if (statusFilter !== "all") {
-      filtered = filtered.filter(device => 
+      filtered = filtered.filter(device =>
         statusFilter === "online" ? device.is_online : !device.is_online
       )
     }
@@ -139,7 +167,7 @@ export default function DevicesListPage() {
   const formatDeviceData = (device: any) => {
     const formatValue = (key: string, value: any) => {
       if (value === null || value === undefined) return "Non disponible"
-      
+
       // Format dates
       if (key.toLowerCase().includes('date') || key.toLowerCase().includes('time') || key.toLowerCase().includes('seen')) {
         try {
@@ -148,12 +176,12 @@ export default function DevicesListPage() {
           return value.toString()
         }
       }
-      
+
       // Format booleans
       if (typeof value === 'boolean') {
         return value ? 'Oui' : 'Non'
       }
-      
+
       // Format numbers
       if (typeof value === 'number') {
         if (key.toLowerCase().includes('level') || key.toLowerCase().includes('battery')) {
@@ -164,12 +192,12 @@ export default function DevicesListPage() {
         }
         return value.toLocaleString()
       }
-      
+
       // Format objects
       if (typeof value === 'object') {
         return JSON.stringify(value, null, 2)
       }
-      
+
       return value.toString()
     }
 
@@ -196,7 +224,7 @@ export default function DevicesListPage() {
         'model': 'Modèle',
         'manufacturer': 'Fabricant'
       }
-      
+
       return keyMap[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
     }
 
@@ -219,7 +247,7 @@ export default function DevicesListPage() {
             Surveiller et gérer les appareils connectés
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
             <Monitor className="h-4 w-4 text-primary" />
@@ -308,58 +336,101 @@ export default function DevicesListPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="font-semibold">Appareil</TableHead>
-                    <TableHead className="font-semibold">Statut</TableHead>
-                    <TableHead className="font-semibold">Détails</TableHead>
+                    <TableHead className="font-semibold text-xs uppercase tracking-wider">UID</TableHead>
+                    <TableHead className="font-semibold text-xs uppercase tracking-wider">ID Appareil</TableHead>
+                    <TableHead className="font-semibold text-xs uppercase tracking-wider">Nom</TableHead>
+                    <TableHead className="font-semibold text-xs uppercase tracking-wider">Réseau</TableHead>
+                    <TableHead className="font-semibold text-xs uppercase tracking-wider">Transactions</TableHead>
+                    <TableHead className="font-semibold text-xs uppercase tracking-wider">Taux de Succès</TableHead>
+                    <TableHead className="font-semibold text-xs uppercase tracking-wider">Statut</TableHead>
+                    <TableHead className="font-semibold text-xs uppercase tracking-wider">Créé le</TableHead>
+                    <TableHead className="font-semibold text-xs uppercase tracking-wider text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredDevices.map((device, index) => (
-                    <TableRow key={device.id || device.device_id || index} className="hover:bg-accent/50">
+                    <TableRow key={device.uid || device.id || device.device_id || index} className="hover:bg-accent/50">
+                      <TableCell className="font-mono text-xs max-w-[120px]">
+                        <div className="flex items-center gap-1 group">
+                          <span className="truncate">{device.uid || device.id || "N/A"}</span>
+                          {(device.uid || device.id) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => copyToClipboard(device.uid || device.id, `uid-${index}`)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">
+                        <div className="flex items-center gap-1 group">
+                          <span>{device.device_id || "N/A"}</span>
+                          {device.device_id && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => copyToClipboard(device.device_id, `did-${index}`)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium text-sm">
+                        {device.name || device.device_name || "N/A"}
+                      </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Monitor className="h-5 w-5 text-primary" />
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+                          {device.network_name || "N/A"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {device.total_transactions ?? 0}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-green-500"
+                              style={{ width: `${device.success_rate || 0}%` }}
+                            />
                           </div>
-                          <div>
-                            <div className="font-medium text-foreground">
-                              {device.name || device.device_name || device.device_id || `Device ${index + 1}`}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              ID: {device.id || device.device_id || index}
-                            </div>
-                          </div>
+                          <span className="text-xs font-medium">
+                            {device.success_rate != null ? `${Number(device.success_rate).toFixed(1)}%` : "0%"}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {device.is_online ? (
-                            <>
-                              <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
-                              <span className="text-sm text-green-600 dark:text-green-400">En ligne</span>
-                            </>
+                            <Badge className="bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-300">
+                              <div className="h-1.5 w-1.5 bg-green-600 rounded-full mr-1 animate-pulse" />
+                              En ligne
+                            </Badge>
                           ) : (
-                            <>
-                              <div className="h-2 w-2 bg-gray-400 rounded-full" />
-                              <span className="text-sm text-muted-foreground">Hors ligne</span>
-                            </>
+                            <Badge variant="secondary" className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                              Hors ligne
+                            </Badge>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {/* <span className="text-sm text-muted-foreground">
-                            {Object.keys(device).length} propriétés
-                          </span> */}
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                        {device.created_at ? new Date(device.created_at).toLocaleDateString() : "N/A"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
                           <Dialog>
                             <DialogTrigger asChild>
-                              <Button 
-                                variant="outline" 
+                              <Button
+                                variant="ghost"
                                 size="sm"
                                 onClick={() => setSelectedDevice(device)}
                               >
-                                <Eye className="h-4 w-4 mr-2" />
-                                Voir détails
+                                <Eye className="h-4 w-4" />
                               </Button>
                             </DialogTrigger>
                             <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -375,12 +446,12 @@ export default function DevicesListPage() {
                                     <div className="font-medium text-foreground">
                                       {item.label}
                                     </div>
-                                    <div className="col-span-2 text-sm text-muted-foreground">
+                                    <div className="col-span-2 text-sm text-muted-foreground break-all">
                                       {item.value}
-                          </div>
-                        </div>
+                                    </div>
+                                  </div>
                                 ))}
-                        </div>
+                              </div>
                             </DialogContent>
                           </Dialog>
                         </div>
@@ -393,6 +464,59 @@ export default function DevicesListPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            Affichage de {((currentPage - 1) * itemsPerPage) + 1} à {Math.min(currentPage * itemsPerPage, totalCount)} sur {totalCount} résultats
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Précédent
+            </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let page;
+                if (totalPages <= 5) {
+                  page = i + 1;
+                } else if (currentPage <= 3) {
+                  page = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  page = totalPages - 4 + i;
+                } else {
+                  page = currentPage - 2 + i;
+                }
+                return (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </Button>
+                );
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Suivant
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Empty State */}
       {!loading && filteredDevices.length === 0 && (

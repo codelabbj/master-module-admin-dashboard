@@ -41,7 +41,7 @@ const buttonVariants = cva(
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  VariantProps<typeof buttonVariants> {
   asChild?: boolean
   loading?: boolean
   shimmer?: boolean
@@ -57,12 +57,18 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled || loading}
         {...props}
       >
-        {loading && (
-          <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-        )}
-        {children}
-        {shimmer && (
-          <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+        {asChild ? (
+          children
+        ) : (
+          <>
+            {loading && (
+              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            )}
+            {children}
+            {shimmer && (
+              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+            )}
+          </>
         )}
       </Comp>
     )

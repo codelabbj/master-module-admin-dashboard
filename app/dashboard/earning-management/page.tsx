@@ -7,21 +7,25 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useLanguage } from "@/components/providers/language-provider"
-import { 
-  Search, 
-  ChevronLeft, 
-  ChevronRight, 
-  DollarSign, 
-  TrendingUp, 
-  Users, 
-  Calendar, 
-  Filter, 
-  CheckCircle, 
-  XCircle, 
-  Clock,
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  TrendingUp,
+  CreditCard,
+  DollarSign,
+  Calendar,
+  Filter,
   Download,
-  RefreshCw,
+  CheckCircle,
+  XCircle,
+  Clock,
+  MoreVertical,
+  History,
   Eye,
+  RefreshCw,
+  Copy,
+  Users,
   BarChart3
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -39,6 +43,18 @@ export default function EarningManagementPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(id)
+      toast({
+        title: "Copié !",
+        description: "L'identifiant a été copié dans le presse-papiers.",
+      })
+      setTimeout(() => setCopiedId(null), 2000)
+    })
+  }
   const [sortField, setSortField] = useState<"amount" | "created_at" | "status" | null>(null)
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
   const { t } = useLanguage()
@@ -52,10 +68,10 @@ export default function EarningManagementPage() {
   const [detailError, setDetailError] = useState("")
 
   // Fetch earnings from API
-    const fetchEarnings = async () => {
-      setLoading(true)
-      setError("")
-      try {
+  const fetchEarnings = async () => {
+    setLoading(true)
+    setError("")
+    try {
       const params = new URLSearchParams({
         page: currentPage.toString(),
         page_size: itemsPerPage.toString(),
@@ -69,10 +85,10 @@ export default function EarningManagementPage() {
       if (sortField) {
         params.append("ordering", `${sortDirection === "asc" ? "+" : "-"}${sortField}`)
       }
-      
+
       const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/admin/commission-payments/?${params.toString()}`
       const data = await apiFetch(endpoint)
-      
+
       if (data.results) {
         setEarnings(data.results)
         setTotalCount(data.count || 0)
@@ -83,26 +99,26 @@ export default function EarningManagementPage() {
         setTotalCount(Array.isArray(data) ? data.length : 0)
         setTotalPages(1)
       }
-      
-      toast({ 
-        title: t("earnings.success") || "Gains chargés", 
-        description: t("earnings.loadedSuccessfully") || "Liste des gains chargée avec succès" 
+
+      toast({
+        title: t("earnings.success") || "Gains chargés",
+        description: t("earnings.loadedSuccessfully") || "Liste des gains chargée avec succès"
       })
-      } catch (err: any) {
+    } catch (err: any) {
       const errorMessage = extractErrorMessages(err)
       setError(errorMessage)
       setEarnings([])
       setTotalCount(0)
       setTotalPages(1)
-      toast({ 
-        title: t("earnings.failedToLoad") || "Échec du chargement", 
-        description: errorMessage, 
-        variant: "destructive" 
+      toast({
+        title: t("earnings.failedToLoad") || "Échec du chargement",
+        description: errorMessage,
+        variant: "destructive"
       })
     } finally {
-        setLoading(false)
-      }
+      setLoading(false)
     }
+  }
 
   useEffect(() => {
     fetchEarnings()
@@ -142,16 +158,16 @@ export default function EarningManagementPage() {
       const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/admin/commission-payments/${id}/`
       const data = await apiFetch(endpoint)
       setDetailEarning(data)
-      toast({ 
-        title: t("earnings.detailLoaded") || "Détails chargés", 
-        description: t("earnings.detailLoadedSuccessfully") || "Détails du gain chargés avec succès" 
+      toast({
+        title: t("earnings.detailLoaded") || "Détails chargés",
+        description: t("earnings.detailLoadedSuccessfully") || "Détails du gain chargés avec succès"
       })
     } catch (err: any) {
       setDetailError(extractErrorMessages(err))
-      toast({ 
-        title: t("earnings.detailFailed") || "Échec du chargement", 
-        description: extractErrorMessages(err), 
-        variant: "destructive" 
+      toast({
+        title: t("earnings.detailFailed") || "Échec du chargement",
+        description: extractErrorMessages(err),
+        variant: "destructive"
       })
     } finally {
       setDetailLoading(false)
@@ -180,18 +196,18 @@ export default function EarningManagementPage() {
             Surveiller et gérer les commissions et gains des partenaires
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
             <DollarSign className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium text-foreground">
-              {totalEarnings.toLocaleString()} XOF total
+              {totalEarnings} XOF total
             </span>
           </div>
           <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-950/20 rounded-lg">
             <CheckCircle className="h-4 w-4 text-green-500" />
             <span className="text-sm font-medium text-green-600 dark:text-green-400">
-              {paidEarnings.toLocaleString()} XOF payés
+              {paidEarnings} XOF payés
             </span>
           </div>
           <Button variant="outline" size="sm">
@@ -212,7 +228,7 @@ export default function EarningManagementPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">Total des gains</p>
-                <p className="text-2xl font-bold text-foreground">{totalEarnings.toLocaleString()} XOF</p>
+                <p className="text-2xl font-bold text-foreground">{totalEarnings} XOF</p>
                 <div className="flex items-center gap-1">
                   <TrendingUp className="h-3 w-3 text-green-500" />
                   <span className="text-xs text-green-500">{earnings.length} gains</span>
@@ -230,7 +246,7 @@ export default function EarningManagementPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">Gains payés</p>
-                <p className="text-2xl font-bold text-foreground">{paidEarnings.toLocaleString()} XOF</p>
+                <p className="text-2xl font-bold text-foreground">{paidEarnings} XOF</p>
                 <div className="flex items-center gap-1">
                   <CheckCircle className="h-3 w-3 text-green-500" />
                   <span className="text-xs text-green-500">
@@ -250,7 +266,7 @@ export default function EarningManagementPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">En attente</p>
-                <p className="text-2xl font-bold text-foreground">{pendingEarnings.toLocaleString()} XOF</p>
+                <p className="text-2xl font-bold text-foreground">{pendingEarnings} XOF</p>
                 <div className="flex items-center gap-1">
                   <Clock className="h-3 w-3 text-yellow-500" />
                   <span className="text-xs text-yellow-500">
@@ -372,28 +388,48 @@ export default function EarningManagementPage() {
                             <div className="font-medium text-foreground">
                               {earning.user_name || earning.partner_name || earning.display_name || 'N/A'}
                             </div>
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-sm text-muted-foreground flex items-center gap-1 group">
                               ID: {earning.uid || earning.id || index}
+                              {(earning.uid || earning.id) && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => copyToClipboard(earning.uid || earning.id, `earn-${earning.uid || earning.id}`)}
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="text-lg font-semibold text-foreground">
-                          {earning.formatted_amount || `${(parseFloat(earning.amount) || 0).toLocaleString()} XOF`}
+                          {earning.formatted_amount || `${(parseFloat(earning.amount) || 0)} XOF`}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm text-muted-foreground">
-                          {earning.period_start && earning.period_end ? 
-                            `${new Date(earning.period_start).toLocaleDateString()} - ${new Date(earning.period_end).toLocaleDateString()}` : 
+                          {earning.period_start && earning.period_end ?
+                            `${new Date(earning.period_start).toLocaleDateString()} - ${new Date(earning.period_end).toLocaleDateString()}` :
                             'N/A'
                           }
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm text-foreground font-mono">
-                          {earning.reference || 'N/A'}
+                        <div className="font-mono text-sm flex items-center gap-1 group">
+                          {earning.reference || "N/A"}
+                          {earning.reference && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => copyToClipboard(earning.reference, `ref-${earning.uid || earning.id}`)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -411,8 +447,8 @@ export default function EarningManagementPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => handleOpenDetail((earning.uid || earning.id || index).toString())}
                           >
@@ -447,7 +483,16 @@ export default function EarningManagementPage() {
             </Button>
             <div className="flex items-center gap-1">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const page = i + 1;
+                let page;
+                if (totalPages <= 5) {
+                  page = i + 1;
+                } else if (currentPage <= 3) {
+                  page = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  page = totalPages - 4 + i;
+                } else {
+                  page = currentPage - 2 + i;
+                }
                 return (
                   <Button
                     key={page}
@@ -500,11 +545,11 @@ export default function EarningManagementPage() {
                   <span className="text-sm">{detailEarning.paid_by_name || 'N/A'}</span>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Montant</label>
-                  <span className="text-lg font-semibold">{detailEarning.formatted_amount || `${(parseFloat(detailEarning.amount) || 0).toLocaleString()} XOF`}</span>
+                  <span className="text-lg font-semibold">{detailEarning.formatted_amount || `${(parseFloat(detailEarning.amount) || 0)} XOF`}</span>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Nombre de transactions</label>
@@ -520,8 +565,8 @@ export default function EarningManagementPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Période</label>
                   <span className="text-sm">
-                    {detailEarning.period_start && detailEarning.period_end ? 
-                      `${new Date(detailEarning.period_start).toLocaleDateString()} - ${new Date(detailEarning.period_end).toLocaleDateString()}` : 
+                    {detailEarning.period_start && detailEarning.period_end ?
+                      `${new Date(detailEarning.period_start).toLocaleDateString()} - ${new Date(detailEarning.period_end).toLocaleDateString()}` :
                       'N/A'
                     }
                   </span>

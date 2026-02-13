@@ -36,16 +36,16 @@ export default function TopupPage() {
 	const [detailTopup, setDetailTopup] = useState<any | null>(null)
 	const [detailLoading, setDetailLoading] = useState(false)
 	const [detailError, setDetailError] = useState("")
-	
+
 	// Approve/Reject modal state
 	const [actionModalOpen, setActionModalOpen] = useState(false);
-	const [actionType, setActionType] = useState<"approve"|"reject"|null>(null);
-	const [actionTopup, setActionTopup] = useState<any|null>(null);
+	const [actionType, setActionType] = useState<"approve" | "reject" | null>(null);
+	const [actionTopup, setActionTopup] = useState<any | null>(null);
 	const [adminNotes, setAdminNotes] = useState("");
 	const [rejectionReason, setRejectionReason] = useState("");
 	const [confirmModalOpen, setConfirmModalOpen] = useState(false);
 	const [pendingAction, setPendingAction] = useState(false);
-	const [disabledTopups, setDisabledTopups] = useState<{[uid:string]:"approved"|"rejected"|undefined}>({});
+	const [disabledTopups, setDisabledTopups] = useState<{ [uid: string]: "approved" | "rejected" | undefined }>({});
 	const [proofImageModalOpen, setProofImageModalOpen] = useState(false);
 	const [proofImageUrl, setProofImageUrl] = useState<string | null>(null);
 	const [actionError, setActionError] = useState<string>("");
@@ -155,10 +155,10 @@ export default function TopupPage() {
 			'proof_submitted': { color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300', icon: AlertTriangle },
 			'preuve soumise': { color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300', icon: AlertTriangle }
 		};
-		
+
 		const statusInfo = statusMap[statusDisplay.toLowerCase()] || statusMap['pending'];
 		const IconComponent = statusInfo.icon;
-		
+
 		return (
 			<Badge className={statusInfo.color}>
 				<div className="flex items-center space-x-1">
@@ -179,7 +179,7 @@ export default function TopupPage() {
 					</div>
 					<div className="h-6 w-32 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
 				</div>
-				
+
 				<Card className="animate-pulse">
 					<CardHeader>
 						<div className="h-6 w-32 bg-neutral-200 dark:bg-neutral-800 rounded" />
@@ -207,7 +207,7 @@ export default function TopupPage() {
 						Gérer et examiner les demandes de recharge des utilisateurs
 					</p>
 				</div>
-				
+
 				<div className="flex items-center gap-3">
 					<div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
 						<DollarSign className="h-4 w-4 text-primary" />
@@ -230,7 +230,7 @@ export default function TopupPage() {
 							<div className="space-y-2">
 								<p className="text-sm font-medium text-muted-foreground">Montant total</p>
 								<p className="text-2xl font-bold text-foreground">
-									{totalAmount.toLocaleString()} XOF
+									{totalAmount} XOF
 								</p>
 							</div>
 							<div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -289,7 +289,7 @@ export default function TopupPage() {
 			{error && (
 				<Card>
 					<CardContent className="p-6">
-						<ErrorDisplay 
+						<ErrorDisplay
 							error={error}
 							onRetry={handleRefresh}
 						/>
@@ -379,9 +379,9 @@ export default function TopupPage() {
 										</TableCell>
 										<TableCell>
 											<div className="flex gap-2 items-center">
-												<Button 
-													size="sm" 
-													variant="outline" 
+												<Button
+													size="sm"
+													variant="outline"
 													onClick={() => handleOpenDetail(topup.uid)}
 													className="flex items-center gap-1"
 												>
@@ -432,8 +432,8 @@ export default function TopupPage() {
 									</TableRow>
 								))}
 							</TableBody>
-							</Table>
-						</div>
+						</Table>
+					</div>
 
 					{/* Pagination */}
 					<div className="flex items-center justify-between mt-6">
@@ -684,8 +684,8 @@ export default function TopupPage() {
 								// || (actionTopup?.expires_at && new Date(actionTopup.expires_at) < new Date())
 							}
 							className={
-								actionType === "approve" 
-									? "bg-green-600 hover:bg-green-700 text-white" 
+								actionType === "approve"
+									? "bg-green-600 hover:bg-green-700 text-white"
 									: "bg-red-600 hover:bg-red-700 text-white"
 							}
 						>

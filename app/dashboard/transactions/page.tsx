@@ -9,27 +9,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useLanguage } from "@/components/providers/language-provider"
 import { useApi } from "@/lib/useApi"
-import { 
-  Search, 
-  ChevronLeft, 
-  ChevronRight, 
-  CreditCard, 
-  TrendingUp, 
-  DollarSign, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle, 
-  Plus, 
-  Filter, 
-  MoreHorizontal, 
-  Eye, 
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  CreditCard,
+  TrendingUp,
+  DollarSign,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Plus,
+  Filter,
+  MoreHorizontal,
+  Eye,
   TrendingDown,
   Download,
   RefreshCw,
   ArrowUpDown,
   Pencil,
-  Trash
+  Trash,
+  Calendar,
+  Copy,
+  User,
+  History,
+  MoreVertical,
+  Undo2,
+  Ban,
+  Trash2
 } from "lucide-react"
 import {
   Dialog,
@@ -77,6 +85,7 @@ export default function TransactionsPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [copiedId, setCopiedId] = useState<string | null>(null)
   const [sortField, setSortField] = useState<"amount" | "created_at" | "status" | null>(null)
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
   const { t } = useLanguage()
@@ -96,41 +105,41 @@ export default function TransactionsPage() {
   const [editTransaction, setEditTransaction] = useState<any | null>(null)
   const [showEditConfirm, setShowEditConfirm] = useState(false)
   const [pendingEditPayload, setPendingEditPayload] = useState<any | null>(null)
-  
+
   // Delete state
   const [deleteUid, setDeleteUid] = useState<string | null>(null)
-  
+
   // Create modal state
   const [createModalOpen, setCreateModalOpen] = useState(false)
-  
+
   // Retry modal state
   const [retryModalOpen, setRetryModalOpen] = useState(false)
   const [retryReason, setRetryReason] = useState("")
   const [retryLoading, setRetryLoading] = useState(false)
   const [retryError, setRetryError] = useState("")
   const [retryTransaction, setRetryTransaction] = useState<any | null>(null)
-  
+
   // Cancel modal state
   const [cancelModalOpen, setCancelModalOpen] = useState(false)
   const [cancelReason, setCancelReason] = useState("")
   const [cancelLoading, setCancelLoading] = useState(false)
   const [cancelError, setCancelError] = useState("")
   const [cancelTransaction, setCancelTransaction] = useState<any | null>(null)
-  
+
   // Mark as success modal state
   const [successModalOpen, setSuccessModalOpen] = useState(false)
   const [successReason, setSuccessReason] = useState("")
   const [successLoading, setSuccessLoading] = useState(false)
   const [successError, setSuccessError] = useState("")
   const [successTransaction, setSuccessTransaction] = useState<any | null>(null)
-  
+
   // Mark as failed modal state
   const [failedModalOpen, setFailedModalOpen] = useState(false)
   const [failedReason, setFailedReason] = useState("")
   const [failedLoading, setFailedLoading] = useState(false)
   const [failedError, setFailedError] = useState("")
   const [failedTransaction, setFailedTransaction] = useState<any | null>(null)
-  
+
   // Edit form state
   const [editForm, setEditForm] = useState({
     status: "",
@@ -146,10 +155,10 @@ export default function TransactionsPage() {
 
   // Helper function to add timeout to API calls
   const apiWithTimeout = async (url: string, timeoutMs: number = 10000) => {
-    const timeoutPromise = new Promise((_, reject) => 
+    const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
     )
-    
+
     return Promise.race([
       apiFetch(url),
       timeoutPromise
@@ -169,7 +178,7 @@ export default function TransactionsPage() {
         if (attempt === maxRetries) {
           throw error
         }
-        
+
         // Exponential backoff: wait 1s, then 2s, then 4s
         const delay = Math.pow(2, attempt) * 1000
         console.log(`API call failed, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1})`)
@@ -216,18 +225,18 @@ export default function TransactionsPage() {
 
       const endpoint = `${baseUrl}/api/payments/transactions/?${params.toString()}`
       const data = await apiWithRetry(endpoint)
-      
+
       setTransactions(data.results || [])
       setTotalCount(data.count || 0)
       setTotalPages(Math.ceil((data.count || 0) / itemsPerPage))
-      
+
       toast({
         title: "Transactions chargées",
         description: `${data.count || 0} transactions trouvées`,
       })
     } catch (err: any) {
       console.error('Transactions fetch error:', err)
-      
+
       // Check if error is due to timeout
       if (err?.message?.includes('Request timeout')) {
         toast({
@@ -236,13 +245,13 @@ export default function TransactionsPage() {
           variant: "destructive",
         })
       }
-      
+
       const errorMessage = err?.message || "Échec du chargement des transactions"
       setError(errorMessage)
       setTransactions([])
       setTotalCount(0)
       setTotalPages(1)
-      
+
       toast({
         title: "Erreur de chargement",
         description: errorMessage,
@@ -268,14 +277,14 @@ export default function TransactionsPage() {
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; color: string }> = {
-      pending:      { label: "En attente", color: "#ffc107" },      // jaune
+      pending: { label: "En attente", color: "#ffc107" },      // jaune
       sent_to_user: { label: "Envoyé", color: "#17a2b8" },          // bleu clair
-      processing:   { label: "En cours", color: "#fd7e14" },        // orange
-      completed:    { label: "Terminé", color: "#28a745" },         // vert foncé
-      success:      { label: "Succès", color: "#20c997" },          // turquoise
-      failed:       { label: "Échec", color: "#dc3545" },           // rouge
-      cancelled:    { label: "Annulé", color: "#6c757d" },          // gris
-      timeout:      { label: "Expiré", color: "#6f42c1" },          // violet
+      processing: { label: "En cours", color: "#fd7e14" },        // orange
+      completed: { label: "Terminé", color: "#28a745" },         // vert foncé
+      success: { label: "Succès", color: "#20c997" },          // turquoise
+      failed: { label: "Échec", color: "#dc3545" },           // rouge
+      cancelled: { label: "Annulé", color: "#6c757d" },          // gris
+      timeout: { label: "Expiré", color: "#6f42c1" },          // violet
     }
 
     const info = statusMap[status] || { label: status, color: "#adb5bd" }
@@ -318,43 +327,11 @@ export default function TransactionsPage() {
     }
   }
 
-  const handleOpenDetail = async (uid: string) => {
+  const handleOpenDetail = (transaction: any) => {
+    setSelectedTransaction(transaction)
     setDetailModalOpen(true)
-    setDetailLoading(true)
+    setDetailLoading(false)
     setDetailError("")
-    setSelectedTransaction(null)
-    try {
-      if (!baseUrl) {
-        setDetailError('URL de base de l\'API non configurée')
-        setDetailLoading(false)
-        return
-      }
-
-      const endpoint = `${baseUrl}/api/payments/transactions/${uid}/`
-      const transaction = await apiWithRetry(endpoint)
-      setSelectedTransaction(transaction)
-      setDetailLoading(false)
-    } catch (err: any) {
-      console.error('Transaction detail fetch error:', err)
-      
-      if (err?.message?.includes('Request timeout')) {
-        toast({
-          title: "Timeout des requêtes",
-          description: "La requête a expiré. Vérifiez votre connexion réseau.",
-          variant: "destructive",
-        })
-      }
-      
-      const errorMessage = err?.message || "Échec du chargement des détails de la transaction"
-      setDetailError(errorMessage)
-      setDetailLoading(false)
-      
-      toast({
-        title: "Erreur de chargement",
-        description: errorMessage,
-        variant: "destructive",
-      })
-    }
   }
 
   const handleCloseDetail = () => {
@@ -742,7 +719,7 @@ export default function TransactionsPage() {
             Gérer et surveiller toutes les transactions
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
             <CreditCard className="h-4 w-4 text-primary" />
@@ -758,7 +735,7 @@ export default function TransactionsPage() {
             <RefreshCw className="h-4 w-4 mr-2" />
             Actualiser
           </Button>
-          
+
         </div>
       </div>
 
@@ -834,8 +811,8 @@ export default function TransactionsPage() {
             </div>
           ) : error ? (
             <div className="p-6 text-center">
-              <ErrorDisplay 
-                error={error} 
+              <ErrorDisplay
+                error={error}
                 onRetry={fetchTransactions}
                 variant="full"
               />
@@ -854,8 +831,10 @@ export default function TransactionsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Référence</TableHead>
+                        <TableHead>ID Externe</TableHead>
                         <TableHead className="w-[100px]">Type</TableHead>
-                        <TableHead 
+                        <TableHead>Réseau</TableHead>
+                        <TableHead
                           className="cursor-pointer hover:bg-accent/50"
                           onClick={() => handleSort("amount")}
                         >
@@ -864,8 +843,8 @@ export default function TransactionsPage() {
                             <ArrowUpDown className="h-4 w-4" />
                           </div>
                         </TableHead>
-                        <TableHead>Destinataire</TableHead>
-                        <TableHead 
+                        <TableHead>Téléphone</TableHead>
+                        <TableHead
                           className="cursor-pointer hover:bg-accent/50"
                           onClick={() => handleSort("status")}
                         >
@@ -874,8 +853,9 @@ export default function TransactionsPage() {
                             <ArrowUpDown className="h-4 w-4" />
                           </div>
                         </TableHead>
+                        <TableHead>Traité par</TableHead>
                         <TableHead>Créé par</TableHead>
-                        <TableHead 
+                        <TableHead
                           className="cursor-pointer hover:bg-accent/50"
                           onClick={() => handleSort("created_at")}
                         >
@@ -891,8 +871,33 @@ export default function TransactionsPage() {
                       {transactions.map((transaction) => (
                         <TableRow key={transaction.uid} className="hover:bg-accent/20">
                           <TableCell>
-                            <div className="font-mono text-sm">
-                              {transaction.reference || transaction.uid || "N/A"}
+                            <div className="font-mono text-sm flex items-center gap-1 group">
+                              {transaction.reference || "N/A"}
+                              {transaction.reference && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => copyToClipboard(transaction.reference, `ref-${transaction.uid}`)}
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm flex items-center gap-1 group">
+                              {transaction.external_transaction_id || "N/A"}
+                              {transaction.external_transaction_id && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => copyToClipboard(transaction.external_transaction_id, `ext-${transaction.uid}`)}
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -904,17 +909,27 @@ export default function TransactionsPage() {
                             </div>
                           </TableCell>
                           <TableCell>
+                            <div className="text-sm">
+                              {transaction.network_name || "N/A"}
+                            </div>
+                          </TableCell>
+                          <TableCell>
                             <div className="font-semibold">
-                              {parseFloat(transaction.amount || 0).toLocaleString()} FCFA
+                              {parseFloat(transaction.amount || 0)} FCFA
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="text-sm">
-                              {transaction.display_recipient_name || transaction.recipient_phone || "N/A"}
+                              {transaction.recipient_phone || "N/A"}
                             </div>
                           </TableCell>
                           <TableCell>
                             {getStatusBadge(transaction.status)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm font-medium">
+                              {transaction.processed_by_name || "N/A"}
+                            </div>
                           </TableCell>
                           <TableCell>
                             <div className="text-sm">
@@ -978,21 +993,12 @@ export default function TransactionsPage() {
                                     </div>
                                   </Link>
                                 </DropdownMenuItem>
-                                {/* <DropdownMenuItem onClick={() => handleOpenDetail(transaction.uid)}>
+                                <DropdownMenuItem onClick={() => handleOpenDetail(transaction)}>
                                   <div className="flex items-center gap-2">
                                     <Eye className="h-4 w-4" />
                                     Voir les détails
                                   </div>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  onClick={() => setDeleteUid(transaction.uid)}
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <Trash className="w-4 h-4" />
-                                    Supprimer
-                                  </div>
-                                </DropdownMenuItem> */}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -1025,7 +1031,16 @@ export default function TransactionsPage() {
             </Button>
             <div className="flex items-center gap-1">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const page = i + 1;
+                let page;
+                if (totalPages <= 5) {
+                  page = i + 1;
+                } else if (currentPage <= 3) {
+                  page = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  page = totalPages - 4 + i;
+                } else {
+                  page = currentPage - 2 + i;
+                }
                 return (
                   <Button
                     key={page}
@@ -1067,72 +1082,174 @@ export default function TransactionsPage() {
               className="mb-4"
             />
           ) : selectedTransaction ? (
-            <div className="space-y-4">
+            <div className="space-y-6 max-h-[70vh] overflow-y-auto px-1">
+              {/* Primary Info */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">ID Transaction</label>
-                  <span className="font-mono text-sm">{selectedTransaction.uid || selectedTransaction.reference || "N/A"}</span>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-muted-foreground uppercase">Référence</label>
+                  <p className="font-mono text-sm break-all">{selectedTransaction.reference || "N/A"}</p>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Statut</label>
-                  {getStatusBadge(selectedTransaction.status)}
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Montant</label>
-                  <span className="text-lg font-semibold">{parseFloat(selectedTransaction.amount || 0).toLocaleString()} FCFA</span>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Type</label>
-                  <Badge variant="outline" className="capitalize">
-                    {selectedTransaction.type || selectedTransaction.trans_type || "N/A"}
-                  </Badge>
+                <div className="space-y-1 text-right">
+                  <label className="text-xs font-bold text-muted-foreground uppercase">Statut</label>
+                  <div className="flex justify-end">{getStatusBadge(selectedTransaction.status)}</div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Utilisateur</label>
-                <span className="text-sm">{selectedTransaction.user_email || selectedTransaction.created_by_email || selectedTransaction.display_recipient_name || "N/A"}</span>
+              {/* Amount & Type Highlights */}
+              <div className="grid grid-cols-2 gap-4 p-4 bg-primary/5 border border-primary/10 rounded-xl">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-primary/70 uppercase">Montant</label>
+                  <p className="text-2xl font-black text-primary">{parseFloat(selectedTransaction.amount || 0)} FCFA</p>
+                </div>
+                <div className="space-y-1 text-right">
+                  <label className="text-xs font-bold text-primary/70 uppercase">Type</label>
+                  <div className="flex items-center justify-end gap-2">
+                    {getTypeIcon(selectedTransaction.type || selectedTransaction.trans_type)}
+                    <span className="font-bold text-lg capitalize">{selectedTransaction.type || selectedTransaction.trans_type || "N/A"}</span>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Description</label>
-                <span className="text-sm">{selectedTransaction.description || selectedTransaction.confirmation_message || "N/A"}</span>
+              {/* Core Details Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 py-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-muted-foreground uppercase block">Réseau</label>
+                  <Badge variant="secondary" className="font-mono">{selectedTransaction.network_name || "N/A"}</Badge>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-muted-foreground uppercase">Téléphone</label>
+                  <p className="text-sm font-semibold">{selectedTransaction.recipient_phone || "N/A"}</p>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-muted-foreground uppercase">Destinataire</label>
+                  <p className="text-sm font-semibold">{selectedTransaction.display_recipient_name || selectedTransaction.recipient_name || "N/A"}</p>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-muted-foreground uppercase">ID Externe</label>
+                  <p className="text-sm font-mono truncate" title={selectedTransaction.external_transaction_id}>{selectedTransaction.external_transaction_id || "N/A"}</p>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-muted-foreground uppercase">Frais</label>
+                  <p className="text-sm">{selectedTransaction.fees ? `${selectedTransaction.fees} FCFA` : "0 FCFA"}</p>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-muted-foreground uppercase">Objet</label>
+                  <p className="text-sm">{selectedTransaction.objet || "N/A"}</p>
+                </div>
               </div>
 
-              {selectedTransaction.recipient_phone && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Téléphone du destinataire</label>
-                  <span className="text-sm">{selectedTransaction.recipient_phone}</span>
+              {/* Timestamps */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 bg-accent/5 rounded-lg border border-accent/10">
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase block">Création</label>
+                    <p className="text-xs font-medium">{selectedTransaction.created_at ? new Date(selectedTransaction.created_at).toLocaleString() : "N/A"}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase block">Complétion</label>
+                    <p className="text-xs font-medium">{selectedTransaction.completed_at ? new Date(selectedTransaction.completed_at).toLocaleString() : "N/A"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* User Context */}
+              <div className="space-y-3 pt-4 border-t">
+                <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest">Contexte Utilisateur</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-muted-foreground uppercase">Créé par</label>
+                    <p className="text-sm font-medium">{selectedTransaction.created_by_name || "N/A"}</p>
+                    <p className="text-xs text-muted-foreground italic">{selectedTransaction.created_by_email}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-muted-foreground uppercase">Traité par</label>
+                    <p className="text-sm font-medium">{selectedTransaction.processed_by_name || "N/A"}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-2 bg-green-50/50 dark:bg-green-900/10 rounded border border-green-100 dark:border-green-900/20">
+                    <label className="text-[10px] font-bold text-green-700 dark:text-green-400 uppercase block">Solde Avant</label>
+                    <p className="text-sm font-bold">{selectedTransaction.balance_before ?? "N/A"} FCFA</p>
+                  </div>
+                  <div className="p-2 bg-blue-50/50 dark:bg-blue-900/10 rounded border border-blue-100 dark:border-blue-900/20">
+                    <label className="text-[10px] font-bold text-blue-700 dark:text-blue-400 uppercase block">Solde Après</label>
+                    <p className="text-sm font-bold">{selectedTransaction.balance_after ?? "N/A"} FCFA</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Technical / Raw Data */}
+              {(selectedTransaction.ussd_path || selectedTransaction.raw_sms || selectedTransaction.error_message || selectedTransaction.confirmation_message) && (
+                <div className="space-y-4 pt-4 border-t text-xs">
+                  <h4 className="font-black text-muted-foreground uppercase tracking-widest">Données Techniques</h4>
+
+                  {selectedTransaction.confirmation_message && (
+                    <div className="space-y-1">
+                      <label className="font-bold text-muted-foreground uppercase">Message Confirmation</label>
+                      <p className="bg-muted p-2 rounded italic">"{selectedTransaction.confirmation_message}"</p>
+                    </div>
+                  )}
+
+                  {selectedTransaction.ussd_path && selectedTransaction.ussd_path.length > 0 && (
+                    <div className="space-y-1">
+                      <label className="font-bold text-muted-foreground uppercase">Parcours USSD</label>
+                      <div className="bg-muted p-2 rounded font-mono text-[10px] space-y-1 max-h-40 overflow-y-auto">
+                        {selectedTransaction.ussd_path.map((step: string, i: number) => (
+                          <div key={i} className={step.startsWith("Envoyé:") ? "text-primary font-bold" : "text-muted-foreground"}>
+                            <span className="opacity-50 mr-1">[{i + 1}]</span> {step}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedTransaction.raw_sms && (
+                    <div className="space-y-1">
+                      <label className="font-bold text-muted-foreground uppercase">SMS Brut</label>
+                      <p className="bg-muted p-2 rounded italic border-l-2 border-primary">"{selectedTransaction.raw_sms}"</p>
+                    </div>
+                  )}
+
+                  {selectedTransaction.error_message && (
+                    <div className="space-y-1">
+                      <label className="font-bold text-red-600 uppercase">Message d'Erreur</label>
+                      <p className="bg-red-50 dark:bg-red-900/10 text-red-600 p-2 rounded border border-red-100 dark:border-red-900/20">{selectedTransaction.error_message}</p>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {selectedTransaction.external_transaction_id && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">ID Transaction Externe</label>
-                  <span className="text-sm font-mono">{selectedTransaction.external_transaction_id}</span>
-                </div>
-              )}
+              {/* Dynamic Catch-all for any other fields */}
+              <div className="space-y-3 pt-4 border-t">
+                <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Informations Complémentaires</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                  {Object.entries(selectedTransaction).map(([key, value]) => {
+                    // Skip keys we've already shown or shouldn't show (like uid)
+                    const skipKeys = [
+                      'uid', 'reference', 'status', 'amount', 'type', 'trans_type',
+                      'network_name', 'recipient_phone', 'display_recipient_name',
+                      'recipient_name', 'external_transaction_id', 'fees', 'objet',
+                      'created_at', 'completed_at', 'balance_before', 'balance_after',
+                      'created_by_name', 'created_by_email', 'processed_by_name',
+                      'ussd_path', 'raw_sms', 'error_message', 'confirmation_message',
+                      'user_email', 'description'
+                    ];
 
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Date de création</label>
-                  <span className="text-sm">{selectedTransaction.created_at ? new Date(selectedTransaction.created_at).toLocaleString() : "N/A"}</span>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Dernière mise à jour</label>
-                  <span className="text-sm">{selectedTransaction.updated_at ? new Date(selectedTransaction.updated_at).toLocaleString() : (selectedTransaction.created_at ? new Date(selectedTransaction.created_at).toLocaleString() : "N/A")}</span>
+                    if (skipKeys.includes(key) || value === null || value === undefined || typeof value === 'object') return null;
+
+                    return (
+                      <div key={key} className="flex justify-between border-b border-muted py-1">
+                        <span className="text-muted-foreground font-medium">{key}:</span>
+                        <span className="font-mono text-[11px] truncate ml-2" title={String(value)}>{String(value)}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-
-              {selectedTransaction.error_message && (
-                <div className="space-y-2 pt-4 border-t">
-                  <label className="text-sm font-medium text-muted-foreground text-red-600">Message d'erreur</label>
-                  <span className="text-sm text-red-600">{selectedTransaction.error_message}</span>
-                </div>
-              )}
             </div>
           ) : null}
           <DialogFooter>
@@ -1362,23 +1479,7 @@ export default function TransactionsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteUid} onOpenChange={() => setDeleteUid(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Cette action ne peut pas être annulée. Cela supprimera définitivement la transaction.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDeleteUid(null)}>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
-              Supprimer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Delete Confirmation Dialog removed */}
     </div>
   )
 }

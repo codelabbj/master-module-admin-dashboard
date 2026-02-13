@@ -8,36 +8,44 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { 
-  Search, 
-  ChevronLeft, 
-  ChevronRight, 
-  Copy, 
-  Eye, 
-  DollarSign, 
-  Phone, 
-  Calendar, 
-  Clock, 
-  AlertTriangle, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Eye,
+  DollarSign,
+  Phone,
+  Calendar,
+  Clock,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
   Loader2,
   Download,
   RefreshCw,
   Waves,
-  TrendingUp
+  TrendingUp,
+  MoreHorizontal
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { TransactionActionModals } from "@/components/transaction-action-modals"
 
 interface WaveBusinessTransaction {
   uid: string
   amount: string
   amount_as_integer: number
   recipient_phone: string
-  status: "pending" | "confirmed" | "cancelled" | "expired" | "failed"
+  status: "pending" | "confirmed" | "cancelled" | "expired" | "failed" | "successfull" | "accept"
   reference: string
   created_by: number
   fcm_notifications: Array<{
@@ -70,6 +78,18 @@ export default function WaveBusinessTransactionPage() {
   const [transactions, setTransactions] = useState<WaveBusinessTransaction[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(id)
+      toast({
+        title: "Copié !",
+        description: "L'identifiant a été copié dans le presse-papiers.",
+      })
+      setTimeout(() => setCopiedId(null), 2000)
+    })
+  }
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
@@ -81,7 +101,12 @@ export default function WaveBusinessTransactionPage() {
   const [detailTransaction, setDetailTransaction] = useState<WaveBusinessTransaction | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState("")
-  
+
+  // Action modals state
+  const [actionModalOpen, setActionModalOpen] = useState(false)
+  const [actionType, setActionType] = useState<"success" | "failed">("success")
+  const [actionTransaction, setActionTransaction] = useState<WaveBusinessTransaction | null>(null)
+
   const apiFetch = useApi()
   const { toast } = useToast()
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
@@ -101,10 +126,10 @@ export default function WaveBusinessTransactionPage() {
       if (statusFilter !== "all") {
         params.append("status", statusFilter)
       }
-      
+
       const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/wave-business-transactions/?${params.toString()}`
       const data = await apiFetch(endpoint)
-      
+
       if (data.results) {
         setTransactions(data.results)
         setTotalCount(data.count || 0)
@@ -115,10 +140,10 @@ export default function WaveBusinessTransactionPage() {
         setTotalCount(Array.isArray(data) ? data.length : 0)
         setTotalPages(1)
       }
-      
-      toast({ 
-        title: "Transactions chargées", 
-        description: "Liste des transactions Wave Business chargée avec succès" 
+
+      toast({
+        title: "Transactions chargées",
+        description: "Liste des transactions Wave Business chargée avec succès"
       })
     } catch (err: any) {
       const errorMessage = extractErrorMessages(err)
@@ -126,10 +151,10 @@ export default function WaveBusinessTransactionPage() {
       setTransactions([])
       setTotalCount(0)
       setTotalPages(1)
-      toast({ 
-        title: "Échec du chargement", 
-        description: errorMessage, 
-        variant: "destructive" 
+      toast({
+        title: "Échec du chargement",
+        description: errorMessage,
+        variant: "destructive"
       })
     } finally {
       setLoading(false)
@@ -175,16 +200,16 @@ export default function WaveBusinessTransactionPage() {
       const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/wave-business-transactions/${uid}/`
       const data = await apiFetch(endpoint)
       setDetailTransaction(data)
-      toast({ 
-        title: "Détails chargés", 
-        description: "Détails de la transaction chargés avec succès" 
+      toast({
+        title: "Détails chargés",
+        description: "Détails de la transaction chargés avec succès"
       })
     } catch (err: any) {
       setDetailError(extractErrorMessages(err))
-      toast({ 
-        title: "Échec du chargement", 
-        description: extractErrorMessages(err), 
-        variant: "destructive" 
+      toast({
+        title: "Échec du chargement",
+        description: extractErrorMessages(err),
+        variant: "destructive"
       })
     } finally {
       setDetailLoading(false)
@@ -197,20 +222,10 @@ export default function WaveBusinessTransactionPage() {
     setDetailError("")
   }
 
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({
-        title: "Copié!",
-        description: "Le texte a été copié dans le presse-papiers",
-      })
-    } catch (err) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de copier le texte",
-        variant: "destructive",
-      })
-    }
+  const handleOpenAction = (transaction: WaveBusinessTransaction, type: "success" | "failed") => {
+    setActionTransaction(transaction)
+    setActionType(type)
+    setActionModalOpen(true)
   }
 
   const totalAmount = transactions.reduce((sum, t) => sum + t.amount_as_integer, 0)
@@ -229,7 +244,7 @@ export default function WaveBusinessTransactionPage() {
             Surveiller et gérer les transactions Wave Business
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
             <Waves className="h-4 w-4 text-primary" />
@@ -240,7 +255,7 @@ export default function WaveBusinessTransactionPage() {
           <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-950/20 rounded-lg">
             <CheckCircle className="h-4 w-4 text-green-500" />
             <span className="text-sm font-medium text-green-600 dark:text-green-400">
-              {(confirmedAmount / 100).toLocaleString()} XOF confirmées
+              {(confirmedAmount)} XOF confirmées
             </span>
           </div>
           <Button variant="outline" size="sm">
@@ -261,7 +276,7 @@ export default function WaveBusinessTransactionPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">Total des transactions</p>
-                <p className="text-2xl font-bold text-foreground">{(totalAmount / 100).toLocaleString()} XOF</p>
+                <p className="text-2xl font-bold text-foreground">{(totalAmount)} XOF</p>
                 <div className="flex items-center gap-1">
                   <TrendingUp className="h-3 w-3 text-green-500" />
                   <span className="text-xs text-green-500">+8% ce mois</span>
@@ -279,7 +294,7 @@ export default function WaveBusinessTransactionPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">Confirmées</p>
-                <p className="text-2xl font-bold text-foreground">{(confirmedAmount / 100).toLocaleString()} XOF</p>
+                <p className="text-2xl font-bold text-foreground">{(confirmedAmount)} XOF</p>
                 <div className="flex items-center gap-1">
                   <CheckCircle className="h-3 w-3 text-green-500" />
                   <span className="text-xs text-green-500">
@@ -299,7 +314,7 @@ export default function WaveBusinessTransactionPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">En attente</p>
-                <p className="text-2xl font-bold text-foreground">{(pendingAmount / 100).toLocaleString()} XOF</p>
+                <p className="text-2xl font-bold text-foreground">{(pendingAmount)} XOF</p>
                 <div className="flex items-center gap-1">
                   <Clock className="h-3 w-3 text-yellow-500" />
                   <span className="text-xs text-yellow-500">
@@ -392,14 +407,14 @@ export default function WaveBusinessTransactionPage() {
                 <span className="text-muted-foreground">Chargement des transactions...</span>
               </div>
             </div>
-            ) : error ? (
-              <div className="p-6 text-center">
-                <ErrorDisplay 
-                  error={error} 
-                  onRetry={handleRefresh}
-                  className="mb-4"
-                />
-              </div>
+          ) : error ? (
+            <div className="p-6 text-center">
+              <ErrorDisplay
+                error={error}
+                onRetry={handleRefresh}
+                className="mb-4"
+              />
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -423,8 +438,16 @@ export default function WaveBusinessTransactionPage() {
                             <Waves className="h-5 w-5 text-primary" />
                           </div>
                           <div>
-                            <div className="font-medium text-foreground">
+                            <div className="font-medium text-foreground flex items-center gap-1 group">
                               {transaction.uid}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => copyToClipboard(transaction.uid, `uid-${transaction.uid}`)}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
                             </div>
                             <div className="text-sm text-muted-foreground">
                               ID: {transaction.uid.substring(0, 8)}...
@@ -434,7 +457,7 @@ export default function WaveBusinessTransactionPage() {
                       </TableCell>
                       <TableCell>
                         <div className="text-lg font-semibold text-foreground">
-                          {(transaction.amount_as_integer / 100).toLocaleString()} XOF
+                          {(transaction.amount_as_integer)} XOF
                         </div>
                       </TableCell>
                       <TableCell>
@@ -449,8 +472,18 @@ export default function WaveBusinessTransactionPage() {
                         {getStatusBadge(transaction.status)}
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm text-foreground font-mono">
-                          {transaction.reference}
+                        <div className="font-mono text-sm flex items-center gap-1 group">
+                          {transaction.reference || "N/A"}
+                          {transaction.reference && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => copyToClipboard(transaction.reference, `ref-${transaction.uid}`)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -463,20 +496,54 @@ export default function WaveBusinessTransactionPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => copyToClipboard(transaction.uid)}
                           >
                             <Copy className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleOpenDetail(transaction.uid)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleOpenDetail(transaction.uid)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                Voir les détails
+                              </DropdownMenuItem>
+
+                              {/* Mark Success: NOT accept, successfull, or confirmed */}
+                              {transaction.status !== "confirmed" &&
+                                transaction.status !== "successfull" &&
+                                transaction.status !== "accept" && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleOpenAction(transaction, "success")}
+                                    className="text-green-600 focus:text-green-600"
+                                  >
+                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    Mark Success
+                                  </DropdownMenuItem>
+                                )}
+
+                              {/* Mark as Failed: pending, confirmed, accept, or successfull */}
+                              {(transaction.status === "pending" ||
+                                transaction.status === "confirmed" ||
+                                transaction.status === "accept" ||
+                                transaction.status === "successfull") && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleOpenAction(transaction, "failed")}
+                                    className="text-red-600 focus:text-red-700"
+                                  >
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Mark as failed
+                                  </DropdownMenuItem>
+                                )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -506,7 +573,16 @@ export default function WaveBusinessTransactionPage() {
             </Button>
             <div className="flex items-center gap-1">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const page = i + 1;
+                let page;
+                if (totalPages <= 5) {
+                  page = i + 1;
+                } else if (currentPage <= 3) {
+                  page = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  page = totalPages - 4 + i;
+                } else {
+                  page = currentPage - 2 + i;
+                }
                 return (
                   <Button
                     key={page}
@@ -569,11 +645,11 @@ export default function WaveBusinessTransactionPage() {
                   {getStatusBadge(detailTransaction.status)}
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Montant</label>
-                  <span className="text-lg font-semibold">{(detailTransaction.amount_as_integer / 100).toLocaleString()} XOF</span>
+                  <span className="text-lg font-semibold">{(detailTransaction.amount_as_integer)} XOF</span>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Téléphone destinataire</label>
@@ -649,6 +725,15 @@ export default function WaveBusinessTransactionPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <TransactionActionModals
+        isOpen={actionModalOpen}
+        onClose={() => setActionModalOpen(false)}
+        transaction={actionTransaction}
+        actionType={actionType}
+        onSuccess={handleRefresh}
+        baseUrl={baseUrl}
+      />
     </div>
   )
 }

@@ -8,37 +8,48 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { 
-  Search, 
-  ChevronLeft, 
-  ChevronRight, 
-  Copy, 
-  Eye, 
-  DollarSign, 
-  Phone, 
-  Calendar, 
-  Clock, 
-  AlertTriangle, 
-  CheckCircle, 
-  XCircle, 
-  Loader2, 
-  Smartphone, 
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Monitor,
+  Smartphone,
+  CheckCircle,
+  XCircle,
+  Clock,
+  ShieldCheck,
+  SmartphoneNfc,
   CreditCard,
   Download,
+  Filter,
+  Eye,
   RefreshCw,
-  TrendingUp
+  Copy,
+  DollarSign,
+  Phone,
+  Calendar,
+  AlertTriangle,
+  TrendingUp,
+  MoreHorizontal
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { TransactionActionModals } from "@/components/transaction-action-modals"
 
 interface MomoPayTransaction {
   uid: string
   amount: string
   amount_as_integer: number
   recipient_phone: string
-  status: "pending" | "confirmed" | "cancelled" | "expired" | "failed"
+  status: "pending" | "confirmed" | "cancelled" | "expired" | "failed" | "successfull" | "accept"
   reference: string
   payment_type: string
   created_by: number
@@ -63,6 +74,18 @@ export default function MomoPayPage() {
   const [transactions, setTransactions] = useState<MomoPayTransaction[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(id)
+      toast({
+        title: "Copié !",
+        description: "L'identifiant a été copié dans le presse-papiers.",
+      })
+      setTimeout(() => setCopiedId(null), 2000)
+    })
+  }
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
@@ -72,7 +95,12 @@ export default function MomoPayPage() {
   const [detailTransaction, setDetailTransaction] = useState<MomoPayTransaction | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState("")
-  
+
+  // Action modals state
+  const [actionModalOpen, setActionModalOpen] = useState(false)
+  const [actionType, setActionType] = useState<"success" | "failed">("success")
+  const [actionTransaction, setActionTransaction] = useState<MomoPayTransaction | null>(null)
+
   const apiFetch = useApi()
   const { toast } = useToast()
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
@@ -92,10 +120,10 @@ export default function MomoPayPage() {
       if (statusFilter !== "all") {
         params.append("status", statusFilter)
       }
-      
+
       const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/momo-pay-transactions/?${params.toString()}`
       const data = await apiFetch(endpoint)
-      
+
       if (data.results) {
         setTransactions(data.results)
         setTotalCount(data.count || 0)
@@ -106,10 +134,10 @@ export default function MomoPayPage() {
         setTotalCount(Array.isArray(data) ? data.length : 0)
         setTotalPages(1)
       }
-      
-      toast({ 
-        title: "Transactions chargées", 
-        description: "Liste des transactions MoMo Pay chargée avec succès" 
+
+      toast({
+        title: "Transactions chargées",
+        description: "Liste des transactions MoMo Pay chargée avec succès"
       })
     } catch (err: any) {
       const errorMessage = extractErrorMessages(err)
@@ -117,10 +145,10 @@ export default function MomoPayPage() {
       setTransactions([])
       setTotalCount(0)
       setTotalPages(1)
-      toast({ 
-        title: "Échec du chargement", 
-        description: errorMessage, 
-        variant: "destructive" 
+      toast({
+        title: "Échec du chargement",
+        description: errorMessage,
+        variant: "destructive"
       })
     } finally {
       setLoading(false)
@@ -171,16 +199,16 @@ export default function MomoPayPage() {
       const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/momo-pay-transactions/${uid}/`
       const data = await apiFetch(endpoint)
       setDetailTransaction(data)
-      toast({ 
-        title: "Détails chargés", 
-        description: "Détails de la transaction chargés avec succès" 
+      toast({
+        title: "Détails chargés",
+        description: "Détails de la transaction chargés avec succès"
       })
     } catch (err: any) {
       setDetailError(extractErrorMessages(err))
-      toast({ 
-        title: "Échec du chargement", 
-        description: extractErrorMessages(err), 
-        variant: "destructive" 
+      toast({
+        title: "Échec du chargement",
+        description: extractErrorMessages(err),
+        variant: "destructive"
       })
     } finally {
       setDetailLoading(false)
@@ -193,20 +221,10 @@ export default function MomoPayPage() {
     setDetailError("")
   }
 
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({ 
-        title: "Copié!",
-        description: "Le texte a été copié dans le presse-papiers",
-      })
-    } catch (err) {
-      toast({ 
-        title: "Erreur",
-        description: "Impossible de copier le texte",
-        variant: "destructive",
-      })
-    }
+  const handleOpenAction = (transaction: MomoPayTransaction, type: "success" | "failed") => {
+    setActionTransaction(transaction)
+    setActionType(type)
+    setActionModalOpen(true)
   }
 
   const totalAmount = transactions.reduce((sum, t) => sum + t.amount_as_integer, 0)
@@ -225,7 +243,7 @@ export default function MomoPayPage() {
             Surveiller et gérer les transactions MoMo Pay
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
             <Smartphone className="h-4 w-4 text-primary" />
@@ -236,7 +254,7 @@ export default function MomoPayPage() {
           <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-950/20 rounded-lg">
             <CheckCircle className="h-4 w-4 text-green-500" />
             <span className="text-sm font-medium text-green-600 dark:text-green-400">
-              {(confirmedAmount / 100).toLocaleString()} XOF confirmées
+              {(confirmedAmount)} XOF confirmées
             </span>
           </div>
           <Button variant="outline" size="sm">
@@ -254,10 +272,10 @@ export default function MomoPayPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="hover-lift">
           <CardContent className="p-6">
-          <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">Total des transactions</p>
-                <p className="text-2xl font-bold text-foreground">{(totalAmount / 100).toLocaleString()} XOF</p>
+                <p className="text-2xl font-bold text-foreground">{(totalAmount)} XOF</p>
                 <div className="flex items-center gap-1">
                   <TrendingUp className="h-3 w-3 text-green-500" />
                   <span className="text-xs text-green-500">+15% ce mois</span>
@@ -275,7 +293,7 @@ export default function MomoPayPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">Confirmées</p>
-                <p className="text-2xl font-bold text-foreground">{(confirmedAmount / 100).toLocaleString()} XOF</p>
+                <p className="text-2xl font-bold text-foreground">{(confirmedAmount)} XOF</p>
                 <div className="flex items-center gap-1">
                   <CheckCircle className="h-3 w-3 text-green-500" />
                   <span className="text-xs text-green-500">
@@ -295,7 +313,7 @@ export default function MomoPayPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">En attente</p>
-                <p className="text-2xl font-bold text-foreground">{(pendingAmount / 100).toLocaleString()} XOF</p>
+                <p className="text-2xl font-bold text-foreground">{(pendingAmount)} XOF</p>
                 <div className="flex items-center gap-1">
                   <Clock className="h-3 w-3 text-yellow-500" />
                   <span className="text-xs text-yellow-500">
@@ -305,8 +323,8 @@ export default function MomoPayPage() {
               </div>
               <div className="h-12 w-12 rounded-xl bg-yellow-500/10 flex items-center justify-center">
                 <Clock className="h-6 w-6 text-yellow-500" />
-          </div>
-        </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -335,32 +353,32 @@ export default function MomoPayPage() {
       <Card>
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Search */}
-              <div className="relative">
+            {/* Search */}
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
+              <Input
                 placeholder="Rechercher une transaction..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
                 variant="minimal"
-                />
-              </div>
+              />
+            </div>
 
-              {/* Status Filter */}
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger>
                 <SelectValue placeholder="Filtrer par statut" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les statuts</SelectItem>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les statuts</SelectItem>
                 <SelectItem value="confirmed">Confirmée</SelectItem>
-                  <SelectItem value="pending">En attente</SelectItem>
+                <SelectItem value="pending">En attente</SelectItem>
                 <SelectItem value="cancelled">Annulée</SelectItem>
                 <SelectItem value="expired">Expirée</SelectItem>
                 <SelectItem value="failed">Échouée</SelectItem>
-                </SelectContent>
-              </Select>
+              </SelectContent>
+            </Select>
 
             {/* Quick Actions */}
             <div className="flex items-center gap-2">
@@ -369,50 +387,50 @@ export default function MomoPayPage() {
                 Exporter CSV
               </Button>
             </div>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Transactions Table */}
+      {/* Transactions Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Smartphone className="h-5 w-5 text-primary" />
             Liste des transactions MoMo Pay
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="flex flex-col items-center space-y-4">
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center space-y-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 <span className="text-muted-foreground">Chargement des transactions...</span>
               </div>
-              </div>
-            ) : error ? (
-              <div className="p-6 text-center">
-                <ErrorDisplay 
-                  error={error} 
-                  onRetry={handleRefresh}
-                  className="mb-4"
-                />
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
+            </div>
+          ) : error ? (
+            <div className="p-6 text-center">
+              <ErrorDisplay
+                error={error}
+                onRetry={handleRefresh}
+                className="mb-4"
+              />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
                     <TableHead className="font-semibold">Transaction</TableHead>
                     <TableHead className="font-semibold">Montant</TableHead>
                     <TableHead className="font-semibold">Téléphone</TableHead>
-                      <TableHead className="font-semibold">Type</TableHead>
-                      <TableHead className="font-semibold">Statut</TableHead>
+                    <TableHead className="font-semibold">Type</TableHead>
+                    <TableHead className="font-semibold">Statut</TableHead>
                     <TableHead className="font-semibold">Référence</TableHead>
                     <TableHead className="font-semibold">Date</TableHead>
-                      <TableHead className="font-semibold text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                    <TableHead className="font-semibold text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {filteredTransactions.map((transaction) => (
                     <TableRow key={transaction.uid} className="hover:bg-accent/50">
                       <TableCell>
@@ -421,171 +439,232 @@ export default function MomoPayPage() {
                             <Smartphone className="h-5 w-5 text-primary" />
                           </div>
                           <div>
-                            <div className="font-medium text-foreground">
+                            <div className="font-medium text-foreground flex items-center gap-1 group">
                               {transaction.uid}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => copyToClipboard(transaction.uid, `uid-${transaction.uid}`)}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
                             </div>
                             <div className="text-sm text-muted-foreground">
                               ID: {transaction.uid.substring(0, 8)}...
                             </div>
                           </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <div className="text-lg font-semibold text-foreground">
-                          {(transaction.amount_as_integer / 100).toLocaleString()} XOF
-                          </div>
-                        </TableCell>
-                        <TableCell>
+                          {(transaction.amount_as_integer)} XOF
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4 text-muted-foreground" />
                           <span className="text-sm text-foreground font-mono">
                             {transaction.recipient_phone}
                           </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-2">
-                            {getPaymentTypeIcon(transaction.payment_type)}
+                          {getPaymentTypeIcon(transaction.payment_type)}
                           <span className="text-sm text-foreground capitalize">
                             {transaction.payment_type}
                           </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         {getStatusBadge(transaction.status)}
-                        </TableCell>
-                        <TableCell>
-                        <div className="text-sm text-foreground font-mono">
-                          {transaction.reference}
-                          </div>
-                        </TableCell>
-                        <TableCell>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-mono text-sm flex items-center gap-1 group">
+                          {transaction.reference || "N/A"}
+                          {transaction.reference && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => copyToClipboard(transaction.reference, `ref-${transaction.uid}`)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">
                             {new Date(transaction.created_at).toLocaleDateString()}
                           </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => copyToClipboard(transaction.uid)}
                           >
                             <Copy className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleOpenDetail(transaction.uid)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleOpenDetail(transaction.uid)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                Voir les détails
+                              </DropdownMenuItem>
+
+                              {/* Mark Success: NOT accept, successfull, or confirmed */}
+                              {transaction.status !== "confirmed" &&
+                                transaction.status !== "successfull" &&
+                                transaction.status !== "accept" && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleOpenAction(transaction, "success")}
+                                    className="text-green-600 focus:text-green-600"
+                                  >
+                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    Mark Success
+                                  </DropdownMenuItem>
+                                )}
+
+                              {/* Mark as Failed: pending, confirmed, accept, or successfull */}
+                              {(transaction.status === "pending" ||
+                                transaction.status === "confirmed" ||
+                                transaction.status === "accept" ||
+                                transaction.status === "successfull") && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleOpenAction(transaction, "failed")}
+                                    className="text-red-600 focus:text-red-700"
+                                  >
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Mark as failed
+                                  </DropdownMenuItem>
+                                )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
             Affichage de {((currentPage - 1) * 10) + 1} à {Math.min(currentPage * 10, totalCount)} sur {totalCount} résultats
-            </div>
-          <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Précédent
-              </Button>
-            <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const page = i + 1;
-                  return (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(page)}
-                    >
-                      {page}
-                    </Button>
-                  );
-                })}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Suivant
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
           </div>
-        )}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Précédent
+            </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let page;
+                if (totalPages <= 5) {
+                  page = i + 1;
+                } else if (currentPage <= 3) {
+                  page = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  page = totalPages - 4 + i;
+                } else {
+                  page = currentPage - 2 + i;
+                }
+                return (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </Button>
+                );
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Suivant
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
-        {/* Transaction Details Modal */}
-        <Dialog open={detailModalOpen} onOpenChange={(open) => { if (!open) handleCloseDetail() }}>
+      {/* Transaction Details Modal */}
+      <Dialog open={detailModalOpen} onOpenChange={(open) => { if (!open) handleCloseDetail() }}>
         <DialogContent className="max-w-2xl">
-            <DialogHeader>
+          <DialogHeader>
             <DialogTitle>Détails de la transaction MoMo Pay</DialogTitle>
-            </DialogHeader>
-            {detailLoading ? (
+          </DialogHeader>
+          {detailLoading ? (
             <div className="p-4 text-center">Chargement...</div>
-            ) : detailError ? (
-              <ErrorDisplay
-                error={detailError}
-                variant="inline"
-                showRetry={false}
-                className="mb-4"
-              />
-            ) : detailTransaction ? (
+          ) : detailError ? (
+            <ErrorDisplay
+              error={detailError}
+              variant="inline"
+              showRetry={false}
+              className="mb-4"
+            />
+          ) : detailTransaction ? (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">UID</label>
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-sm">{detailTransaction.uid}</span>
-                        <Button
-                          variant="ghost"
+                    <Button
+                      variant="ghost"
                       size="icon"
                       className="h-6 w-6"
                       onClick={() => copyToClipboard(detailTransaction.uid)}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Statut</label>
                   {getStatusBadge(detailTransaction.status)}
-                    </div>
-                  </div>
+                </div>
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Montant</label>
-                  <span className="text-lg font-semibold">{(detailTransaction.amount_as_integer / 100).toLocaleString()} XOF</span>
-                    </div>
+                  <span className="text-lg font-semibold">{(detailTransaction.amount_as_integer)} XOF</span>
+                </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Téléphone</label>
                   <span className="text-sm font-mono">{detailTransaction.recipient_phone}</span>
-                    </div>
-                  </div>
+                </div>
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -594,12 +673,12 @@ export default function MomoPayPage() {
                     {getPaymentTypeIcon(detailTransaction.payment_type)}
                     <span className="text-sm capitalize">{detailTransaction.payment_type}</span>
                   </div>
-                    </div>
+                </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Référence</label>
                   <span className="text-sm font-mono">{detailTransaction.reference}</span>
-                    </div>
-                  </div>
+                </div>
+              </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground">URL de callback</label>
@@ -646,15 +725,24 @@ export default function MomoPayPage() {
                 <label className="text-sm font-medium text-muted-foreground">Expire le</label>
                 <span className="text-sm">{new Date(detailTransaction.expires_at).toLocaleString()}</span>
               </div>
-              </div>
-            ) : null}
+            </div>
+          ) : null}
           <DialogFooter>
             <Button onClick={handleCloseDetail} className="w-full">
-                Fermer
-              </Button>
+              Fermer
+            </Button>
           </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      <TransactionActionModals
+        isOpen={actionModalOpen}
+        onClose={() => setActionModalOpen(false)}
+        transaction={actionTransaction}
+        actionType={actionType}
+        onSuccess={handleRefresh}
+        baseUrl={baseUrl}
+      />
     </div>
   )
 }

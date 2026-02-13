@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, ArrowUpDown, ChevronLeft, ChevronRight, FileText, Filter, CheckCircle, XCircle, Clock, DollarSign } from "lucide-react"
+import { Search, ArrowUpDown, ChevronLeft, ChevronRight, FileText, Filter, CheckCircle, XCircle, Clock, DollarSign, Copy } from "lucide-react"
 import { useApi } from "@/lib/useApi"
 import { useLanguage } from "@/components/providers/language-provider"
 import { useToast } from "@/hooks/use-toast"
@@ -17,7 +17,7 @@ const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 // Colors for consistent theming
 const COLORS = {
   primary: '#3B82F6',
-  secondary: '#10B981', 
+  secondary: '#10B981',
   accent: '#F59E0B',
   danger: '#EF4444',
   warning: '#F97316',
@@ -37,6 +37,18 @@ export default function TransactionLogsListPage() {
   const [error, setError] = useState("")
   const [searchInput, setSearchInput] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(id)
+      toast({
+        title: "Copié !",
+        description: "L'identifiant a été copié dans le presse-papiers.",
+      })
+      setTimeout(() => setCopiedId(null), 2000)
+    })
+  }
   const [sortField, setSortField] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
   const [currentPage, setCurrentPage] = useState(1)
@@ -103,10 +115,10 @@ export default function TransactionLogsListPage() {
     fetchLogs()
   }, [apiFetch, currentPage, pageSize, searchTerm, sortField, sortDirection, t])
 
-    return (
+  return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
+
         {/* Page Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
@@ -129,29 +141,29 @@ export default function TransactionLogsListPage() {
               </div>
             </div>
           </div>
-      </div>
+        </div>
 
         {/* Search and Filters */}
         <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg mb-6">
           <CardContent className="p-6">
             <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
+                <Input
                   placeholder="Rechercher dans les journaux de transaction..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   onKeyPress={(e) => e.key === "Enter" && handleSearchSubmit()}
                   className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
                 />
               </div>
-            <Button
-              onClick={handleSearchSubmit}
+              <Button
+                onClick={handleSearchSubmit}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-            >
+              >
                 Rechercher
-            </Button>
-          </div>
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -175,68 +187,80 @@ export default function TransactionLogsListPage() {
               </div>
             ) : error ? (
               <div className="p-6 text-center">
-                <ErrorDisplay error={error} onRetry={() => {/* retry function */}} />
-        </div>
+                <ErrorDisplay error={error} onRetry={() => {/* retry function */ }} />
+              </div>
             ) : (
               <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
+                <Table>
+                  <TableHeader>
                     <TableRow className="bg-gray-50 dark:bg-gray-900/50">
                       <TableHead className="font-semibold">
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           onClick={() => handleSort("created_at")}
                           className="h-auto p-0 font-semibold hover:bg-transparent"
                         >
                           Date
-                      <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </Button>
-                  </TableHead>
+                          <ArrowUpDown className="ml-2 h-4 w-4" />
+                        </Button>
+                      </TableHead>
                       <TableHead className="font-semibold">ID de transaction</TableHead>
                       <TableHead className="font-semibold">Type</TableHead>
                       <TableHead className="font-semibold">Statut</TableHead>
                       <TableHead className="font-semibold">Montant</TableHead>
                       <TableHead className="font-semibold">Utilisateur</TableHead>
                       <TableHead className="font-semibold">Détails</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {logs.map((log) => (
                       <TableRow key={log.id || log.uid} className="hover:bg-gray-50 dark:hover:bg-gray-900/50">
                         <TableCell>
                           <div className="text-sm text-gray-600 dark:text-gray-400">
-                            {log.created_at 
+                            {log.created_at
                               ? new Date(log.created_at).toLocaleString()
                               : 'Inconnu'
                             }
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="font-mono text-xs">
-                            {log.transaction_id || log.id || 'N/A'}
-                          </Badge>
+                          <div className="flex items-center gap-1 group">
+                            <Badge variant="outline" className="font-mono text-xs">
+                              {log.transaction_id || log.id || 'N/A'}
+                            </Badge>
+                            {(log.transaction_id || log.id) && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => copyToClipboard(log.transaction_id || log.id, `log-${log.id || log.uid}`)}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
-                          <Badge 
+                          <Badge
                             className={
                               log.transaction_type === 'deposit'
                                 ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300"
                                 : log.transaction_type === 'withdrawal'
-                                ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300"
-                                : "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
+                                  ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300"
+                                  : "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
                             }
                           >
                             {log.transaction_type || 'Inconnu'}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge 
+                          <Badge
                             className={
                               log.status === 'success' || log.status === 'completed'
                                 ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300"
                                 : log.status === 'failed' || log.status === 'error'
-                                ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300"
-                                : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300"
+                                  ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300"
+                                  : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300"
                             }
                           >
                             <div className="flex items-center space-x-1">
@@ -264,7 +288,7 @@ export default function TransactionLogsListPage() {
                             {log.user_name || log.user_id || 'Inconnu'}
                           </div>
                         </TableCell>
-                      <TableCell>
+                        <TableCell>
                           <div className="max-w-xs">
                             <div className="text-sm text-gray-900 dark:text-gray-100 truncate">
                               {log.message || log.description || 'Aucun détail'}
@@ -275,35 +299,44 @@ export default function TransactionLogsListPage() {
                               </div>
                             )}
                           </div>
-                      </TableCell>
-                    </TableRow>
+                        </TableCell>
+                      </TableRow>
                     ))}
-              </TableBody>
-            </Table>
+                  </TableBody>
+                </Table>
               </div>
             )}
           </CardContent>
         </Card>
 
-            {/* Pagination */}
+        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between mt-6">
             <div className="text-sm text-gray-600 dark:text-gray-400">
               Affichage de {((currentPage - 1) * pageSize) + 1} à {Math.min(currentPage * pageSize, count)} sur {count} résultats
-              </div>
+            </div>
             <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
+              >
+                <ChevronLeft className="h-4 w-4" />
                 Précédent
               </Button>
               <div className="flex items-center space-x-1">
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const page = i + 1;
+                  let page;
+                  if (totalPages <= 5) {
+                    page = i + 1;
+                  } else if (currentPage <= 3) {
+                    page = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    page = totalPages - 4 + i;
+                  } else {
+                    page = currentPage - 2 + i;
+                  }
                   return (
                     <Button
                       key={page}
@@ -313,19 +346,19 @@ export default function TransactionLogsListPage() {
                       className={currentPage === page ? "bg-blue-600 text-white" : ""}
                     >
                       {page}
-                </Button>
+                    </Button>
                   );
                 })}
               </div>
-                <Button
-                  variant="outline"
-                  size="sm"
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
-                >
+              >
                 Suivant
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         )}
@@ -341,8 +374,8 @@ export default function TransactionLogsListPage() {
               <p className="text-gray-500 dark:text-gray-400 mb-4">
                 {searchTerm ? `Aucun journal de transaction ne correspond à "${searchTerm}"` : "Aucun journal de transaction n'a encore été enregistré."}
               </p>
-      </CardContent>
-    </Card>
+            </CardContent>
+          </Card>
         )}
 
       </div>

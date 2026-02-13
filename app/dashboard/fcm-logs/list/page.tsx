@@ -31,13 +31,24 @@ export default function FcmLogsListPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [copied, setCopied] = useState<string | null>(null)
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(id)
+      toast({
+        title: "Copié !",
+        description: "L'identifiant a été copié dans le presse-papiers.",
+      })
+      setTimeout(() => setCopied(null), 2000)
+    })
+  }
   const [searchTerm, setSearchTerm] = useState("")
   const [deviceFilter, setDeviceFilter] = useState("all")
   const [sortField, setSortField] = useState<"created_at" | "device_id" | null>(null)
   const [sortDirection, setSortDirection] = useState<"+" | "-">("-")
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(100)
-  
+  const [pageSize, setPageSize] = useState(20)
+
   const apiFetch = useApi()
   const { t } = useLanguage()
   const { toast } = useToast()
@@ -56,7 +67,7 @@ export default function FcmLogsListPage() {
           page: currentPage.toString(),
           page_size: pageSize.toString(),
         })
-        
+
         if (searchTerm.trim() !== "") {
           params.append("search", searchTerm)
         }
@@ -66,12 +77,12 @@ export default function FcmLogsListPage() {
         if (sortField) {
           params.append("ordering", `${sortDirection}${sortField}`)
         }
-        
+
         const query = params.toString().replace(/ordering=%2B/g, "ordering=+")
         const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/fcm-logs/?${query}`
-        
+
         const data = await apiFetch(endpoint)
-        
+
         // Handle both paginated and non-paginated responses
         if (data.results) {
           setPaginationData(data)
@@ -84,7 +95,7 @@ export default function FcmLogsListPage() {
             results: Array.isArray(data) ? data : []
           })
         }
-        
+
         toast({
           title: t("fcmLogs.success"),
           description: t("fcmLogs.loadedSuccessfully"),
@@ -143,7 +154,7 @@ export default function FcmLogsListPage() {
         page: currentPage.toString(),
         page_size: pageSize.toString(),
       })
-      
+
       if (searchTerm.trim() !== "") {
         params.append("search", searchTerm)
       }
@@ -153,12 +164,12 @@ export default function FcmLogsListPage() {
       if (sortField) {
         params.append("ordering", `${sortDirection}${sortField}`)
       }
-      
+
       const query = params.toString().replace(/ordering=%2B/g, "ordering=+")
       const endpoint = `${baseUrl}/api/payments/fcm-logs/?${query}`
-      
+
       const data = await apiFetch(endpoint)
-      
+
       if (data.results) {
         setPaginationData(data)
       } else {
@@ -169,7 +180,7 @@ export default function FcmLogsListPage() {
           results: Array.isArray(data) ? data : []
         })
       }
-      
+
       toast({
         title: t("fcmLogs.success") || "Logs FCM actualisés",
         description: t("fcmLogs.loadedSuccessfully") || "Liste des logs FCM actualisée avec succès",
@@ -187,6 +198,41 @@ export default function FcmLogsListPage() {
     }
   }
 
+  const renderFcmData = (data: any) => {
+    if (!data || typeof data !== 'object') return <span className="text-muted-foreground italic">N/A</span>
+
+    const entries = Object.entries(data).filter(([key]) =>
+      !['raw_fcm', 'ai_confidence_score', 'confidence'].includes(key.toLowerCase())
+    )
+
+    if (entries.length === 0) return <span className="text-muted-foreground italic">N/A</span>
+
+    return (
+      <div className="flex flex-col gap-1.5 py-1">
+        {entries.map(([key, value]: [string, any]) => (
+          <div key={key} className="flex flex-col">
+            <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
+              {key.replace(/_/g, ' ')}
+            </span>
+            <div className="flex items-center gap-1 group/val">
+              <span className="text-xs font-medium text-foreground break-all leading-tight">
+                {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-3 w-3 opacity-0 group-hover/val:opacity-100 transition-opacity"
+                onClick={() => copyToClipboard(typeof value === 'object' ? JSON.stringify(value) : String(value), `val-${key}`)}
+              >
+                <Copy className="h-2 w-2" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -199,7 +245,7 @@ export default function FcmLogsListPage() {
             Surveiller les journaux Firebase Cloud Messaging
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
             <Bell className="h-4 w-4 text-primary" />
@@ -245,8 +291,8 @@ export default function FcmLogsListPage() {
             </Select>
 
             {/* Sort */}
-            <Select 
-              value={sortField || ""} 
+            <Select
+              value={sortField || ""}
               onValueChange={(value) => setSortField(value as "created_at" | "device_id" | null)}
             >
               <SelectTrigger>
@@ -264,9 +310,9 @@ export default function FcmLogsListPage() {
                 <SelectValue placeholder="Taille de page" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="20">20 par page</SelectItem>
                 <SelectItem value="50">50 par page</SelectItem>
                 <SelectItem value="100">100 par page</SelectItem>
-                <SelectItem value="200">200 par page</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -298,84 +344,146 @@ export default function FcmLogsListPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="font-semibold">Appareil</TableHead>
-                    <TableHead className="font-semibold">Message</TableHead>
+                    <TableHead className="font-semibold">UID</TableHead>
+                    <TableHead className="font-semibold">Package Name</TableHead>
+                    <TableHead className="font-semibold">ID Appareil</TableHead>
+                    <TableHead className="font-semibold">Body</TableHead>
                     <TableHead className="font-semibold">Statut</TableHead>
+                    <TableHead className="font-semibold">Data</TableHead>
                     <TableHead className="font-semibold">Date</TableHead>
-                    <TableHead className="font-semibold text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginationData.results.map((log, index) => (
                     <TableRow key={log.id || log.uid || index} className="hover:bg-accent/50">
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Smartphone className="h-4 w-4 text-muted-foreground" />
-                          <Badge variant="outline" className="font-mono text-xs">
-                            {log.device_id || log.device || 'Inconnu'}
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="max-w-xs">
-                          <div className="text-sm text-foreground truncate">
-                            {log.message || log.title || log.body || log.content || 'Aucun message'}
-                          </div>
-                          {log.data && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Données: {JSON.stringify(log.data).substring(0, 50)}...
-                            </div>
+                        <div className="flex items-center gap-1 group">
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {log.uid || log.id || "N/A"}
+                          </span>
+                          {(log.uid || log.id) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => copyToClipboard(log.uid || log.id, `uid-${log.id || index}`)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge 
-                          variant={
-                            log.status === 'success' || log.status === 'delivered' ? "default" :
-                            log.status === 'failed' || log.status === 'error' ? "destructive" :
-                            "secondary"
-                          }
-                        >
-                          <div className="flex items-center gap-1">
-                            {log.status === 'success' || log.status === 'delivered' ? (
-                              <CheckCircle className="h-3 w-3" />
-                            ) : log.status === 'failed' || log.status === 'error' ? (
-                              <XCircle className="h-3 w-3" />
-                            ) : (
-                              <Clock className="h-3 w-3" />
-                            )}
-                            <span>{log.status || 'Inconnu'}</span>
-                          </div>
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm text-muted-foreground">
-                          {log.created_at 
-                            ? new Date(log.created_at).toLocaleString()
-                            : log.timestamp 
-                            ? new Date(log.timestamp).toLocaleString()
-                            : 'Inconnu'
-                          }
+                        <div className="flex items-center gap-1 group">
+                          <span className="text-xs font-medium text-foreground">
+                            {log.package_name || "N/A"}
+                          </span>
+                          {log.package_name && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => copyToClipboard(log.package_name, `pkg-${log.id || index}`)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleCopy(JSON.stringify(log, null, 2))}
-                        >
-                          <Copy className="h-4 w-4 mr-1" />
-                          {copied === JSON.stringify(log, null, 2) ? 'Copié!' : 'Copier'}
-                        </Button>
+                      <TableCell>
+                        <div className="flex items-center gap-1 group">
+                          <Smartphone className="h-3 w-3 text-muted-foreground" />
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {log.device_id || "N/A"}
+                          </span>
+                          {log.device_id && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => copyToClipboard(log.device_id, `device-${log.id || index}`)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-[300px]">
+                        <div className="flex items-start gap-1 group">
+                          <p className="text-sm text-foreground whitespace-normal break-words leading-relaxed">
+                            {log.body || log.message || log.content || "N/A"}
+                          </p>
+                          {(log.body || log.message || log.content) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                              onClick={() => copyToClipboard(log.body || log.message || log.content || "", `body-${log.id || index}`)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <Badge
+                            variant={
+                              log.status === 'success' || log.status === 'delivered' ? "default" :
+                                log.status === 'failed' || log.status === 'error' ? "destructive" :
+                                  "secondary"
+                            }
+                          >
+                            <div className="flex items-center gap-1">
+                              {log.status === 'success' || log.status === 'delivered' ? (
+                                <CheckCircle className="h-3 w-3" />
+                              ) : log.status === 'failed' || log.status === 'error' ? (
+                                <XCircle className="h-3 w-3" />
+                              ) : (
+                                <Clock className="h-3 w-3" />
+                              )}
+                              <span>{log.status || 'Inconnu'}</span>
+                            </div>
+                          </Badge>
+                          {log.status_display && log.status_display !== log.status && (
+                            <span className="text-[10px] text-muted-foreground leading-tight italic">
+                              {log.status_display}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-[220px] align-top">
+                        <div className="flex items-start gap-1 group">
+                          {renderFcmData(log.data)}
+                          {log.data && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 mt-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                              onClick={() => copyToClipboard(JSON.stringify(log.data, null, 2), `data-${log.id || index}`)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 whitespace-nowrap">
+                          <Clock className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">
+                            {log.created_at ? new Date(log.created_at).toLocaleString() :
+                              log.timestamp ? new Date(log.timestamp).toLocaleString() : "N/A"}
+                          </span>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </div>
-            )}
-          </CardContent>
-        </Card>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Pagination */}
       {totalPages > 1 && (
@@ -395,7 +503,16 @@ export default function FcmLogsListPage() {
             </Button>
             <div className="flex items-center gap-1">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const page = i + 1;
+                let page;
+                if (totalPages <= 5) {
+                  page = i + 1;
+                } else if (currentPage <= 3) {
+                  page = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  page = totalPages - 4 + i;
+                } else {
+                  page = currentPage - 2 + i;
+                }
                 return (
                   <Button
                     key={page}

@@ -23,8 +23,8 @@
     --accent-foreground: 0 0% 9%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 90%;
-    --input: 0 0% 100%;
+    --border: 0 0% 80%;
+    --input: 0 0% 80%;
     --ring: 142 100% 33%;
     --radius: 0.5rem;
   }
@@ -47,8 +47,8 @@
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 8%;
-    --input: 0 0% 8%;
+    --border: 0 0% 30%;
+    --input: 0 0% 30%;
     --ring: 142 100% 50%;
   }
 }
@@ -109,7 +109,7 @@
   }
   
   .minimal-input {
-    @apply flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200;
+    @apply flex h-10 w-full rounded-lg border-2 border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200;
   }
   
   .minimal-nav-item {

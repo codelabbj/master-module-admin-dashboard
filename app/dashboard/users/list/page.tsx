@@ -8,21 +8,27 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useLanguage } from "@/components/providers/language-provider"
-import { 
-  Search, 
-  ChevronLeft, 
-  ChevronRight, 
-  MoreHorizontal, 
-  Users, 
-  Filter, 
-  Eye, 
-  CheckCircle, 
-  XCircle, 
-  Mail, 
-  Phone, 
-  Copy,
-  RefreshCw,
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  MoreHorizontal,
+  Filter,
   Download,
+  RefreshCw,
+  MoreVertical,
+  Trash2,
+  ShieldAlert,
+  ShieldCheck,
+  UserCheck,
+  UserX,
+  Mail,
+  Phone,
+  Copy,
+  Users,
+  Eye,
+  CheckCircle,
+  XCircle,
   Settings
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -52,7 +58,19 @@ export default function UsersPage() {
   const { toast } = useToast()
   const [activatingUid, setActivatingUid] = useState<string | null>(null)
   const [deactivatingUid, setDeactivatingUid] = useState<string | null>(null)
-  const [selectedUids, setSelectedUids] = useState<string[]>([])
+  const [selectedUids, setSelectedUids] = useState<string[]>([]);
+  const [copiedUid, setCopiedUid] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedUid(id);
+      toast({
+        title: "Copié !",
+        description: "L'identifiant a été copié dans le presse-papiers.",
+      });
+      setTimeout(() => setCopiedUid(null), 2000);
+    });
+  };
   const allSelected = users.length > 0 && users.every((u) => selectedUids.includes(u.uid))
   const someSelected = users.some((u) => selectedUids.includes(u.uid))
   const apiFetch = useApi();
@@ -60,7 +78,7 @@ export default function UsersPage() {
   const [detailUser, setDetailUser] = useState<any | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState("")
-  
+
   const [verifyingEmail, setVerifyingEmail] = useState(false);
   const [verifyingPhone, setVerifyingPhone] = useState(false);
   const [verifyingPartner, setVerifyingPartner] = useState(false);
@@ -112,12 +130,12 @@ export default function UsersPage() {
         console.log("User API endpoint:", endpoint);
         const data = await apiFetch(endpoint);
         console.log("API response data:", data);
-        
+
         // Handle the actual API response structure
         const users = data.users || data.results || [];
         const totalCount = data.pagination?.total_count || data.count || 0;
         const totalPages = data.pagination?.total_pages || Math.ceil(totalCount / itemsPerPage);
-        
+
         setUsers(users);
         setTotalCount(totalCount);
         setTotalPages(totalPages);
@@ -361,15 +379,15 @@ export default function UsersPage() {
         body: JSON.stringify({ can_process_ussd_transaction: canProcess }),
       });
       setDetailUser((prev: any) => prev ? { ...prev, can_process_ussd_transaction: canProcess } : prev);
-      toast({ 
-        title: "Statut USSD modifié", 
-        description: canProcess ? "Transaction USSD activée avec succès" : "Transaction USSD désactivée avec succès" 
+      toast({
+        title: "Statut USSD modifié",
+        description: canProcess ? "Transaction USSD activée avec succès" : "Transaction USSD désactivée avec succès"
       });
     } catch (err: any) {
-      toast({ 
-        title: "Échec de la modification du statut USSD", 
-        description: extractErrorMessages(err), 
-        variant: "destructive" 
+      toast({
+        title: "Échec de la modification du statut USSD",
+        description: extractErrorMessages(err),
+        variant: "destructive"
       });
     } finally {
       setVerifyingUssd(false);
@@ -388,7 +406,7 @@ export default function UsersPage() {
             Gérer et surveiller les comptes utilisateurs
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
             <Users className="h-4 w-4 text-primary" />
@@ -450,8 +468,8 @@ export default function UsersPage() {
             {/* Bulk Actions */}
             {someSelected && (
               <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => handleBulkAction("activate")}
                   className="text-green-600 border-green-200 hover:bg-green-50"
@@ -459,8 +477,8 @@ export default function UsersPage() {
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Activer ({selectedUids.length})
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => handleBulkAction("deactivate")}
                   className="text-red-600 border-red-200 hover:bg-red-50"
@@ -492,7 +510,7 @@ export default function UsersPage() {
             </div>
           ) : error ? (
             <div className="p-6 text-center">
-              <ErrorDisplay error={error} onRetry={() => {/* retry function */}} />
+              <ErrorDisplay error={error} onRetry={() => {/* retry function */ }} />
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -545,8 +563,16 @@ export default function UsersPage() {
                             <div className="font-medium text-foreground">
                               {user.display_name || 'Sans nom'}
                             </div>
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-sm text-muted-foreground flex items-center gap-1 group">
                               ID: {user.uid}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => copyToClipboard(user.uid, user.uid)}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
                             </div>
                           </div>
                         </div>
@@ -566,7 +592,7 @@ export default function UsersPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge 
+                        <Badge
                           variant={user.is_active ? "default" : "secondary"}
                         >
                           {user.is_active ? 'Actif' : 'Inactif'}
@@ -574,14 +600,14 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Badge 
+                          <Badge
                             variant={user.email_verified ? "success" : "outline"}
                             className="text-xs"
                           >
                             <Mail className="h-3 w-3 mr-1" />
                             {user.email_verified ? 'Vérifié' : 'Non vérifié'}
                           </Badge>
-                          <Badge 
+                          <Badge
                             variant={user.phone_verified ? "success" : "outline"}
                             className="text-xs"
                           >
@@ -658,7 +684,16 @@ export default function UsersPage() {
             </Button>
             <div className="flex items-center gap-1">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const page = i + 1;
+                let page;
+                if (totalPages <= 5) {
+                  page = i + 1;
+                } else if (currentPage <= 3) {
+                  page = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  page = totalPages - 4 + i;
+                } else {
+                  page = currentPage - 2 + i;
+                }
                 return (
                   <Button
                     key={page}
@@ -726,7 +761,7 @@ export default function UsersPage() {
                   </Badge>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-muted-foreground">Nom</Label>
@@ -764,7 +799,7 @@ export default function UsersPage() {
                     onCheckedChange={() => setConfirmEmailToggle(!detailUser.email_verified)}
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Téléphone vérifié</Label>
@@ -776,7 +811,7 @@ export default function UsersPage() {
                     onCheckedChange={() => setConfirmPhoneToggle(!detailUser.phone_verified)}
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Partenaire</Label>
@@ -788,7 +823,7 @@ export default function UsersPage() {
                     onCheckedChange={() => setConfirmPartnerToggle(!detailUser.is_partner)}
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Transaction USSD</Label>

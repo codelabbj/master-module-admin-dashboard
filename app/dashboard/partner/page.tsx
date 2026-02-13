@@ -9,18 +9,18 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useLanguage } from "@/components/providers/language-provider"
-import { 
-  Search, 
-  ChevronLeft, 
-  ChevronRight, 
-  Copy, 
-  Users, 
-  Filter, 
-  CheckCircle, 
-  XCircle, 
-  Mail, 
-  Calendar, 
-  UserCheck, 
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Users,
+  Filter,
+  CheckCircle,
+  XCircle,
+  Mail,
+  Calendar,
+  UserCheck,
   DollarSign,
   Download,
   RefreshCw,
@@ -34,36 +34,37 @@ import { Switch } from "@/components/ui/switch"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
 
 export default function PartnerPage() {
-	const [searchTerm, setSearchTerm] = useState("")
-	const [statusFilter, setStatusFilter] = useState("all")
-	const [currentPage, setCurrentPage] = useState(1)
-	const [partners, setPartners] = useState<any[]>([])
-	const [totalCount, setTotalCount] = useState(0)
-	const [totalPages, setTotalPages] = useState(1)
-	const [loading, setLoading] = useState(false)
-	const [error, setError] = useState("")
-	const [sortField, setSortField] = useState<"display_name" | "email" | "created_at" | null>(null)
-	const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
-	const { t } = useLanguage()
-	const itemsPerPage = 20
-	const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
-	const { toast } = useToast()
-	const apiFetch = useApi();
-	const [detailModalOpen, setDetailModalOpen] = useState(false)
-	const [detailPartner, setDetailPartner] = useState<any | null>(null)
-	const [detailLoading, setDetailLoading] = useState(false)
-	const [detailError, setDetailError] = useState("")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [partners, setPartners] = useState<any[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [sortField, setSortField] = useState<"display_name" | "email" | "created_at" | null>(null)
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
+  const { t } = useLanguage()
+  const itemsPerPage = 20
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+  const { toast } = useToast()
+  const apiFetch = useApi();
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
+  const [detailPartner, setDetailPartner] = useState<any | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState("")
 
-	useEffect(() => {
-		const fetchPartners = async () => {
-			setLoading(true)
-			setError("")
-			try {
+  useEffect(() => {
+    const fetchPartners = async () => {
+      setLoading(true)
+      setError("")
+      try {
         const params = new URLSearchParams({
           page: currentPage.toString(),
           page_size: itemsPerPage.toString(),
         })
-        
+
         if (searchTerm.trim() !== "") {
           params.append("search", searchTerm)
         }
@@ -73,10 +74,10 @@ export default function PartnerPage() {
         if (sortField) {
           params.append("ordering", `${sortDirection === "asc" ? "" : "-"}${sortField}`)
         }
-        
+
         const endpoint = `${baseUrl}/api/auth/admin/users/partners/?${params.toString()}`
         const data = await apiFetch(endpoint)
-        
+
         // Handle the API response structure
         if (data.partners) {
           setPartners(data.partners)
@@ -94,12 +95,12 @@ export default function PartnerPage() {
           setTotalCount(partnersArray.length)
           setTotalPages(1)
         }
-        
+
         toast({
           title: t("partners.success") || "Partenaires chargés",
           description: t("partners.loadedSuccessfully") || "Liste des partenaires chargée avec succès",
         })
-			} catch (err: any) {
+      } catch (err: any) {
         const errorMessage = extractErrorMessages(err) || t("partners.failedToLoad") || "Échec du chargement des partenaires"
         setError(errorMessage)
         setPartners([])
@@ -111,24 +112,24 @@ export default function PartnerPage() {
           variant: "destructive",
         })
         console.error('Partners fetch error:', err)
-			} finally {
+      } finally {
         setLoading(false)
-			}
-		}
+      }
+    }
 
-		fetchPartners()
+    fetchPartners()
   }, [searchTerm, statusFilter, currentPage, sortField, sortDirection])
 
   const filteredPartners = partners // Filtering handled by API
 
-	const handleSort = (field: "display_name" | "email" | "created_at") => {
-		if (sortField === field) {
-			setSortDirection(sortDirection === "asc" ? "desc" : "asc")
-		} else {
-			setSortField(field)
-			setSortDirection("desc")
-		}
-	}
+  const handleSort = (field: "display_name" | "email" | "created_at") => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
+    } else {
+      setSortField(field)
+      setSortDirection("desc")
+    }
+  }
 
   const getStatusBadge = (isActive: boolean) => {
     return (
@@ -138,22 +139,22 @@ export default function PartnerPage() {
     )
   }
 
-	const handleOpenDetail = async (uid: string) => {
-		setDetailModalOpen(true)
-		setDetailLoading(true)
-		setDetailError("")
-		setDetailPartner(null)
-		try {
+  const handleOpenDetail = async (uid: string) => {
+    setDetailModalOpen(true)
+    setDetailLoading(true)
+    setDetailError("")
+    setDetailPartner(null)
+    try {
       const endpoint = `${baseUrl}/api/auth/admin/users/partners/${uid}/`
       const data = await apiFetch(endpoint)
       setDetailPartner(data)
       setDetailLoading(false)
-		} catch (err: any) {
+    } catch (err: any) {
       const errorMessage = extractErrorMessages(err) || "Échec du chargement des détails du partenaire"
       setDetailError(errorMessage)
-			setDetailLoading(false)
-		}
-	}
+      setDetailLoading(false)
+    }
+  }
 
   const handleRefresh = async () => {
     setLoading(true)
@@ -163,7 +164,7 @@ export default function PartnerPage() {
         page: currentPage.toString(),
         page_size: itemsPerPage.toString(),
       })
-      
+
       if (searchTerm.trim() !== "") {
         params.append("search", searchTerm)
       }
@@ -173,10 +174,10 @@ export default function PartnerPage() {
       if (sortField) {
         params.append("ordering", `${sortDirection === "asc" ? "" : "-"}${sortField}`)
       }
-      
+
       const endpoint = `${baseUrl}/api/auth/admin/users/partners/?${params.toString()}`
       const data = await apiFetch(endpoint)
-      
+
       if (data.partners) {
         setPartners(data.partners)
         setTotalCount(data.pagination?.total_count || data.partners.length)
@@ -191,7 +192,7 @@ export default function PartnerPage() {
         setTotalCount(partnersArray.length)
         setTotalPages(1)
       }
-      
+
       toast({
         title: t("partners.success") || "Partenaires actualisés",
         description: t("partners.loadedSuccessfully") || "Liste des partenaires actualisée avec succès",
@@ -231,32 +232,32 @@ export default function PartnerPage() {
     }
   }
 
-	return (
+  return (
     <div className="space-y-8">
       {/* Header */}
-					<div className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground tracking-tight">
             Partenaires
-							</h1>
+          </h1>
           <p className="text-muted-foreground">
             Gérer les partenaires et leurs commissions
-											</p>
-						</div>
-        
+          </p>
+        </div>
+
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
             <Users className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium text-foreground">
               {totalCount.toLocaleString()} partenaires
-									</span>
-								</div>
+            </span>
+          </div>
           <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-950/20 rounded-lg">
             <TrendingUp className="h-4 w-4 text-green-500" />
             <span className="text-sm font-medium text-green-600 dark:text-green-400">
-              {partners.reduce((sum, p) => sum + (parseFloat(p.total_commissions_received) || 0), 0).toLocaleString()} XOF
+              {partners.reduce((sum, p) => sum + (parseFloat(p.total_commissions_received) || 0), 0)} XOF
             </span>
-							</div>
+          </div>
           <Button variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
             Exporter
@@ -265,10 +266,10 @@ export default function PartnerPage() {
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Actualiser
           </Button>
-					</div>
-				</div>
+        </div>
+      </div>
 
-				{/* Summary Cards */}
+      {/* Summary Cards */}
       {/* <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="hover-lift">
 						<CardContent className="p-6">
@@ -316,7 +317,7 @@ export default function PartnerPage() {
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">Commissions Totales</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {partners.reduce((sum, p) => sum + (parseFloat(p.total_commissions_received) || 0), 0).toLocaleString()} XOF
+                  {partners.reduce((sum, p) => sum + (parseFloat(p.total_commissions_received) || 0), 0)} XOF
                 </p>
                 <div className="flex items-center gap-1">
                   <TrendingUp className="h-3 w-3 text-green-500" />
@@ -353,31 +354,31 @@ export default function PartnerPage() {
 
       {/* Filters */}
       <Card>
-					<CardContent className="p-6">
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							{/* Search */}
-							<div className="relative">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Search */}
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-																				<Input
+              <Input
                 placeholder="Rechercher un partenaire..."
-													value={searchTerm}
-													onChange={(e) => setSearchTerm(e.target.value)}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
                 variant="minimal"
-												/>
-						</div>
+              />
+            </div>
 
-							{/* Status Filter */}
-						<Select value={statusFilter} onValueChange={setStatusFilter}>
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger>
-																							<SelectValue placeholder="Filtrer par statut" />
-								</SelectTrigger>
-								<SelectContent>
+                <SelectValue placeholder="Filtrer par statut" />
+              </SelectTrigger>
+              <SelectContent>
                 <SelectItem value="all">Tous les statuts</SelectItem>
-														<SelectItem value="active">Actif</SelectItem>
-														<SelectItem value="inactive">Inactif</SelectItem>
-								</SelectContent>
-							</Select>
+                <SelectItem value="active">Actif</SelectItem>
+                <SelectItem value="inactive">Inactif</SelectItem>
+              </SelectContent>
+            </Select>
 
             {/* Quick Actions */}
             <div className="flex items-center gap-2">
@@ -386,191 +387,196 @@ export default function PartnerPage() {
                 Filtres avancés
               </Button>
             </div>
-					</div>
-					</CardContent>
-				</Card>
+          </div>
+        </CardContent>
+      </Card>
 
-				{/* Partners Table */}
+      {/* Partners Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
             Liste des partenaires
-						</CardTitle>
-					</CardHeader>
-					<CardContent className="p-0">
-						{loading ? (
-							<div className="flex items-center justify-center py-12">
-								<div className="flex flex-col items-center space-y-4">
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center space-y-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 <span className="text-muted-foreground">Chargement des partenaires...</span>
-								</div>
-							</div>
-						) : error ? (
-							<div className="p-6 text-center">
+              </div>
+            </div>
+          ) : error ? (
+            <div className="p-6 text-center">
               <ErrorDisplay error={error} />
-							</div>
-						) : (
-							<div className="overflow-x-auto">
-							<Table>
-								<TableHeader>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-											<TableHead className="font-semibold">Partenaire</TableHead>
-                    <TableHead className="font-semibold">Email</TableHead>
-											<TableHead className="font-semibold">Statut</TableHead>
-                    <TableHead className="font-semibold">Commissions</TableHead>
-                    <TableHead className="font-semibold">Transactions</TableHead>
+                    <TableHead className="font-semibold">Email / Téléphone</TableHead>
+                    <TableHead className="font-semibold">Nom d'affichage</TableHead>
+                    <TableHead className="font-semibold text-center">USSD Autorisé</TableHead>
+                    <TableHead className="font-semibold">Solde du compte</TableHead>
                     <TableHead className="font-semibold">Créé le</TableHead>
                     <TableHead className="font-semibold text-right">Actions</TableHead>
-									</TableRow>
-								</TableHeader>
-								<TableBody>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {filteredPartners.map((partner, index) => (
                     <TableRow key={partner.uid || partner.id || index} className="hover:bg-accent/50">
-												<TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <span className="text-primary font-semibold text-sm">
-                              {(partner.display_name || `${partner.first_name || ''} ${partner.last_name || ''}`.trim() || 'U').charAt(0).toUpperCase()}
-                            </span>
-														</div>
-														<div>
-                            <div className="font-medium text-foreground">
-                              {partner.display_name || `${partner.first_name || ''} ${partner.last_name || ''}`.trim() || 'N/A'}
-															</div>
-                            <div className="text-sm text-muted-foreground">
-                              ID: {partner.uid || index}
-															</div>
-														</div>
-													</div>
-												</TableCell>
-												<TableCell>
-                        <div className="flex items-center gap-2">
+                      <TableCell>
+                        <div className="flex items-center gap-2 group">
                           <Mail className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-foreground">
+                          <span className="text-sm font-medium text-foreground">
                             {partner.email || partner.phone || 'N/A'}
-														</span>
-													</div>
-												</TableCell>
-											<TableCell>
-                        {getStatusBadge(partner.is_active !== undefined ? partner.is_active : partner.is_partner)}
+                          </span>
+                          {(partner.email || partner.phone) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => copyToClipboard(partner.email || partner.phone)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
-                        <div className="space-y-1">
-                          <div className="text-sm font-semibold text-foreground">
-                            {(parseFloat(partner.total_commissions_received) || 0).toLocaleString()} XOF
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            Solde: {(partner.account_balance || 0).toLocaleString()} XOF
-                          </div>
-														</div>
-												</TableCell>
-												<TableCell>
-                        <div className="text-sm font-medium text-foreground">
-                          {partner.total_transactions || 0}
-													</div>
-												</TableCell>
-												<TableCell>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">
-                            {partner.created_at ? new Date(partner.created_at).toLocaleDateString() : 'N/A'}
-														</span>
-													</div>
-											</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-															{/* <Button 
-                            variant="ghost" 
-																size="sm"
-                            onClick={() => handleOpenDetail(partner.uid)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Link href={`/dashboard/partner/details/${partner.uid}`}>
-                            <Button variant="ghost" size="sm">
-                              <UserCheck className="h-4 w-4" />
+                        <div className="flex items-center gap-2 group">
+                          <span className="text-sm text-foreground">
+                            {partner.display_name || 'N/A'}
+                          </span>
+                          {partner.display_name && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => copyToClipboard(partner.display_name)}
+                            >
+                              <Copy className="h-3 w-3" />
                             </Button>
-                          </Link> */}
-                          <Link href={`/dashboard/partner/commission/${partner.uid}`}>
-                            <Button variant="ghost" size="sm">
-                              Comission stats
-                              <DollarSign className="h-4 w-4" />
-															</Button>
-														</Link>
-													</div>
-									</TableCell>
-										</TableRow>
-									))}
-								</TableBody>
-							</Table>
-							</div>
-						)}
-					</CardContent>
-				</Card>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {partner.can_process_ussd_transaction ? (
+                          <Badge className="bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Oui
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="opacity-70">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Non
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 font-semibold text-foreground">
+                          <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+                          {(partner.account_balance || 0).toLocaleString()} XOF
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Calendar className="h-4 w-4" />
+                          <span className="text-sm">
+                            {partner.created_at ? new Date(partner.created_at).toLocaleDateString() : 'N/A'}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Link href={`/dashboard/partner/commission/${partner.uid}`}>
+                          <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/10">
+                            <DollarSign className="h-4 w-4 mr-1" />
+                            Commission stats
+                          </Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-					{/* Pagination */}
-				{totalPages > 1 && (
+      {/* Pagination */}
+      {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
             Affichage de {((currentPage - 1) * itemsPerPage) + 1} à {Math.min(currentPage * itemsPerPage, totalCount)} sur {totalCount} résultats
-						</div>
+          </div>
           <div className="flex items-center gap-2">
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-								disabled={currentPage === 1}
-							>
-								<ChevronLeft className="h-4 w-4" />
-								Précédent
-							</Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Précédent
+            </Button>
             <div className="flex items-center gap-1">
-								{Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-									const page = i + 1;
-									return (
-										<Button
-											key={page}
-											variant={currentPage === page ? "default" : "outline"}
-											size="sm"
-											onClick={() => setCurrentPage(page)}
-										>
-											{page}
-							</Button>
-									);
-								})}
-							</div>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-								disabled={currentPage === totalPages}
-							>
-								Suivant
-								<ChevronRight className="h-4 w-4" />
-							</Button>
-						</div>
-					</div>
-				)}
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let page;
+                if (totalPages <= 5) {
+                  page = i + 1;
+                } else if (currentPage <= 3) {
+                  page = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  page = totalPages - 4 + i;
+                } else {
+                  page = currentPage - 2 + i;
+                }
+                return (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </Button>
+                );
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Suivant
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Partner Details Modal */}
       <Dialog open={detailModalOpen} onOpenChange={(open) => { if (!open) handleCloseDetail() }}>
-					<DialogContent className="max-w-2xl">
-					<DialogHeader>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
             <DialogTitle>Détails du partenaire</DialogTitle>
-					</DialogHeader>
-					{detailLoading ? (
+          </DialogHeader>
+          {detailLoading ? (
             <div className="p-4 text-center">Chargement...</div>
-					) : detailError ? (
+          ) : detailError ? (
             <ErrorDisplay
               error={detailError}
               variant="inline"
               showRetry={false}
               className="mb-4"
             />
-					) : detailPartner ? (
-							<div className="space-y-4">
-								<div className="grid grid-cols-2 gap-4">
+          ) : detailPartner ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">UID</label>
                   <div className="flex items-center gap-2">
@@ -590,7 +596,7 @@ export default function PartnerPage() {
                   {getStatusBadge(detailPartner.is_active)}
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Nom</label>
@@ -600,29 +606,29 @@ export default function PartnerPage() {
                   <label className="text-sm font-medium text-muted-foreground">Contact</label>
                   <span className="text-sm">{detailPartner.email || detailPartner.phone || 'N/A'}</span>
                 </div>
-									</div>
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Commissions Reçues</label>
-                  <span className="text-lg font-semibold">{(parseFloat(detailPartner.total_commissions_received) || 0).toLocaleString()} XOF</span>
-									</div>
+                  <span className="text-lg font-semibold">{(parseFloat(detailPartner.total_commissions_received) || 0)} XOF</span>
+                </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Solde du Compte</label>
-                  <span className="text-lg font-semibold">{(detailPartner.account_balance || 0).toLocaleString()} XOF</span>
-									</div>
-									</div>
+                  <span className="text-lg font-semibold">{(detailPartner.account_balance || 0)} XOF</span>
+                </div>
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Total Transactions</label>
                   <span className="text-sm">{detailPartner.total_transactions || 0}</span>
-									</div>
+                </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Transactions Complétées</label>
                   <span className="text-sm">{detailPartner.completed_transactions || 0}</span>
-									</div>
-									</div>
+                </div>
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -630,23 +636,23 @@ export default function PartnerPage() {
                   <span className="text-sm">
                     {detailPartner.created_at ? new Date(detailPartner.created_at).toLocaleString() : 'N/A'}
                   </span>
-									</div>
+                </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Dernière Connexion</label>
                   <span className="text-sm">
                     {detailPartner.last_login_at ? new Date(detailPartner.last_login_at).toLocaleString() : 'Jamais'}
                   </span>
-									</div>
-							</div>
-						</div>
-					) : null}
+                </div>
+              </div>
+            </div>
+          ) : null}
           <DialogFooter>
             <Button onClick={handleCloseDetail} className="w-full">
               Fermer
             </Button>
           </DialogFooter>
-				</DialogContent>
-			</Dialog>
-		</div>
-	)
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
 }

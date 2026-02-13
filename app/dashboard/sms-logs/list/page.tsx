@@ -6,16 +6,16 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { 
-  Copy, 
-  ChevronLeft, 
-  ChevronRight, 
-  MessageSquare, 
-  Search, 
-  Filter, 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
+import {
+  Copy,
+  ChevronLeft,
+  ChevronRight,
+  MessageSquare,
+  Search,
+  Filter,
+  CheckCircle,
+  XCircle,
+  Clock,
   Phone,
   Download,
   RefreshCw,
@@ -26,6 +26,7 @@ import { useLanguage } from "@/components/providers/language-provider"
 import { useToast } from "@/hooks/use-toast"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
 import { Badge } from "@/components/ui/badge"
+import Link from "next/link"
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
@@ -65,7 +66,7 @@ export default function SmsLogsListPage() {
           page: currentPage.toString(),
           page_size: "20",
         })
-        
+
         if (searchTerm.trim() !== "") {
           params.append("search", searchTerm)
         }
@@ -78,12 +79,12 @@ export default function SmsLogsListPage() {
         if (sortField) {
           params.append("ordering", `${sortDirection}${sortField}`)
         }
-        
+
         const query = params.toString().replace(/ordering=%2B/g, "ordering=+")
         const endpoint = `${baseUrl}/api/payments/sms-logs/?${query}`
-        
+
         const data = await apiFetch(endpoint)
-        
+
         // Handle both paginated and non-paginated responses
         if (data.results) {
           setPaginationData(data)
@@ -96,7 +97,7 @@ export default function SmsLogsListPage() {
             results: Array.isArray(data) ? data : []
           })
         }
-        
+
         toast({
           title: t("smsLogs.success") || "Logs SMS chargés",
           description: t("smsLogs.loadedSuccessfully") || "Liste des logs SMS chargée avec succès",
@@ -128,7 +129,7 @@ export default function SmsLogsListPage() {
 
     if (searchTerm) {
       filtered = filtered.filter(log =>
-        Object.values(log).some(value => 
+        Object.values(log).some(value =>
           value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
         )
       )
@@ -162,7 +163,7 @@ export default function SmsLogsListPage() {
         page: currentPage.toString(),
         page_size: "20",
       })
-      
+
       if (searchTerm.trim() !== "") {
         params.append("search", searchTerm)
       }
@@ -175,12 +176,12 @@ export default function SmsLogsListPage() {
       if (sortField) {
         params.append("ordering", `${sortDirection}${sortField}`)
       }
-      
+
       const query = params.toString().replace(/ordering=%2B/g, "ordering=+")
       const endpoint = `${baseUrl}/api/payments/sms-logs/?${query}`
-      
+
       const data = await apiFetch(endpoint)
-      
+
       if (data.results) {
         setPaginationData(data)
       } else {
@@ -191,7 +192,7 @@ export default function SmsLogsListPage() {
           results: Array.isArray(data) ? data : []
         })
       }
-      
+
       toast({
         title: t("smsLogs.success") || "Logs SMS actualisés",
         description: t("smsLogs.loadedSuccessfully") || "Liste des logs SMS actualisée avec succès",
@@ -249,6 +250,41 @@ export default function SmsLogsListPage() {
     }
   }
 
+  const renderExtractedData = (data: any) => {
+    if (!data || typeof data !== 'object') return <span className="text-muted-foreground italic">N/A</span>
+
+    const entries = Object.entries(data).filter(([key]) =>
+      !['raw_sms', 'ai_confidence_score', 'confidence'].includes(key.toLowerCase())
+    )
+
+    if (entries.length === 0) return <span className="text-muted-foreground italic">N/A</span>
+
+    return (
+      <div className="flex flex-col gap-1.5 py-1">
+        {entries.map(([key, value]: [string, any]) => (
+          <div key={key} className="flex flex-col">
+            <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
+              {key.replace(/_/g, ' ')}
+            </span>
+            <div className="flex items-center gap-1 group/val">
+              <span className="text-xs font-medium text-foreground break-all leading-tight">
+                {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-3 w-3 opacity-0 group-hover/val:opacity-100 transition-opacity"
+                onClick={() => copyToClipboard(typeof value === 'object' ? JSON.stringify(value) : String(value), `val-${key}`)}
+              >
+                <Copy className="h-2 w-2" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -261,7 +297,7 @@ export default function SmsLogsListPage() {
             Surveiller et analyser les messages SMS envoyés
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
             <MessageSquare className="h-4 w-4 text-primary" />
@@ -366,73 +402,117 @@ export default function SmsLogsListPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="font-semibold">Numéro</TableHead>
-                    <TableHead className="font-semibold">Message</TableHead>
-                    <TableHead className="font-semibold">Type</TableHead>
+                    <TableHead className="font-semibold">UID</TableHead>
+                    <TableHead className="font-semibold">Expéditeur</TableHead>
+                    <TableHead className="font-semibold">ID Appareil</TableHead>
+                    <TableHead className="font-semibold">Contenu</TableHead>
+                    <TableHead className="font-semibold">Données extraites</TableHead>
                     <TableHead className="font-semibold">Statut</TableHead>
-                    <TableHead className="font-semibold">Coût</TableHead>
                     <TableHead className="font-semibold">Date</TableHead>
-                    <TableHead className="font-semibold text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredLogs.map((log, index) => (
                     <TableRow key={log.id || index} className="hover:bg-accent/50">
                       <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-mono text-sm text-foreground">
-                              {log.sender ||log.phone_number || log.phone || log.recipient || "N/A"}
-                            </span>
-                          </div>
-                          {/* {log.sender && (
-                            <span className="text-xs font-mono text-muted-foreground">
-                              Sender: {log.sender}
-                            </span>
-                          )} */}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="max-w-xs">
-                          <p className="text-sm text-foreground truncate">
-                            {log.message || log.content || log.text || "N/A"}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {getTypeBadge(log.type || log.message_type || "unknown")}
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(log.status || log.delivery_status || "unknown")}
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm font-medium text-foreground">
-                          {log.cost ? `€${log.cost.toFixed(2)}` : log.price ? `€${log.price.toFixed(2)}` : "N/A"}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">
-                            {log.created_at ? new Date(log.created_at).toLocaleString() : 
-                             log.timestamp ? new Date(log.timestamp).toLocaleString() : 
-                             log.date ? new Date(log.date).toLocaleString() : "N/A"}
+                        <div className="flex items-center gap-1 group">
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {log.uid || log.id || "N/A"}
                           </span>
+                          {(log.uid || log.id) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => copyToClipboard(log.uid || log.id, `uid-${log.id || index}`)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => copyToClipboard(log.message || log.content || log.text || "", (log.id || index).toString())}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                      <TableCell>
+                        <div className="flex items-center gap-1 group">
+                          <span className="font-mono text-xs text-foreground">
+                            {log.sender || "N/A"}
+                          </span>
+                          {log.sender && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => copyToClipboard(log.sender, `sender-${log.id || index}`)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 group">
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {log.device_id || "N/A"}
+                          </span>
+                          {log.device_id && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => copyToClipboard(log.device_id, `device-${log.id || index}`)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-[300px]">
+                        <div className="flex items-start gap-1 group">
+                          <p className="text-sm text-foreground whitespace-normal break-words leading-relaxed">
+                            {log.content || "N/A"}
+                          </p>
+                          {log.content && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                              onClick={() => copyToClipboard(log.content, `msg-${log.id || index}`)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-[220px] align-top">
+                        <div className="flex items-start gap-1 group">
+                          {renderExtractedData(log.extracted_data)}
+                          {log.extracted_data && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 mt-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                              onClick={() => copyToClipboard(JSON.stringify(log.extracted_data, null, 2), `ext-${log.id || index}`)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          {getStatusBadge(log.status || "unknown")}
+                          {log.status_display && log.status_display !== log.status && (
+                            <span className="text-[10px] text-muted-foreground leading-tight italic">
+                              {log.status_display}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 whitespace-nowrap">
+                          <Clock className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">
+                            {log.created_at ? new Date(log.created_at).toLocaleString() : "N/A"}
+                          </span>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -445,10 +525,10 @@ export default function SmsLogsListPage() {
       </Card>
 
       {/* Pagination */}
-      {paginationData.count > 10 && (
+      {paginationData.count > 20 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Affichage de {((currentPage - 1) * 10) + 1} à {Math.min(currentPage * 10, paginationData.count)} sur {paginationData.count} résultats
+            Affichage de {((currentPage - 1) * 20) + 1} à {Math.min(currentPage * 20, paginationData.count)} sur {paginationData.count} résultats
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -461,25 +541,32 @@ export default function SmsLogsListPage() {
               Précédent
             </Button>
             <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, Math.ceil(paginationData.count / 10)) }, (_, i) => {
-                const page = i + 1;
-                return (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(page)}
-                  >
-                    {page}
-                  </Button>
-                );
-              })}
+              {(() => {
+                const totalPages = Math.ceil(paginationData.count / 20);
+                const pages = [];
+                const startPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+                const endPage = Math.min(totalPages, Math.max(currentPage + 2, 5));
+
+                for (let i = startPage; i <= endPage; i++) {
+                  pages.push(
+                    <Button
+                      key={i}
+                      variant={currentPage === i ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(i)}
+                    >
+                      {i}
+                    </Button>
+                  );
+                }
+                return pages;
+              })()}
             </div>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(Math.min(Math.ceil(paginationData.count / 10), currentPage + 1))}
-              disabled={currentPage === Math.ceil(paginationData.count / 10)}
+              onClick={() => setCurrentPage(Math.min(Math.ceil(paginationData.count / 20), currentPage + 1))}
+              disabled={currentPage === Math.ceil(paginationData.count / 20)}
             >
               Suivant
               <ChevronRight className="h-4 w-4" />
