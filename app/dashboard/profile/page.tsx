@@ -10,17 +10,19 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Loader2, 
-  Edit, 
-  Save, 
-  X, 
-  User, 
-  Mail, 
-  Phone, 
-  Shield, 
-  Calendar, 
-  CheckCircle, 
+import { useApi } from "@/lib/useApi";
+import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display";
+import {
+  Loader2,
+  Edit,
+  Save,
+  X,
+  User,
+  Mail,
+  Phone,
+  Shield,
+  Calendar,
+  CheckCircle,
   XCircle,
   Settings,
   Clock
@@ -50,24 +52,15 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const apiFetch = useApi();
   const { toast } = useToast();
 
-  // Mock profile data for demonstration
-  const mockProfile: UserProfile = {
-    uid: "user_12345",
-    email: "john.doe@example.com",
-    phone: "+33123456789",
-    first_name: "John",
-    last_name: "Doe",
-    is_active: true,
-    email_verified: true,
-    phone_verified: false,
-    display_name: "John Doe",
-    is_verified: true,
-    contact_method: "email",
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-01-15T10:30:00Z"
-  };
+
 
   // Get token from localStorage (same as sign-in-form and dashboard layout)
   let token = "";
@@ -76,21 +69,15 @@ export default function ProfilePage() {
   }
 
   useEffect(() => {
-    // Redirect if not logged in (no token)
-    if (!token) {
-      router.push("/");
-      return;
-    }
     const fetchProfile = async () => {
       try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        setProfile(mockProfile);
+        const data = await apiFetch(`${baseUrl}/api/auth/profile/`);
+        setProfile(data);
         setFormData({
-          first_name: mockProfile.first_name,
-          last_name: mockProfile.last_name,
-          email: mockProfile.email,
-          phone: mockProfile.phone,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          email: data.email,
+          phone: data.phone,
         });
       } catch (error) {
         console.error('Error fetching profile:', error);
@@ -105,7 +92,7 @@ export default function ProfilePage() {
     };
 
     fetchProfile();
-  }, [toast, router, token]);
+  }, [toast, router, token, apiFetch]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -120,26 +107,64 @@ export default function ProfilePage() {
     setLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      const updatedProfile = { ...profile, ...formData };
-      setProfile(updatedProfile as UserProfile);
+      const data = await apiFetch(`${baseUrl}/api/auth/profile/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+        }),
+      });
 
+      setProfile(data.user || data);
       setEditing(false);
       toast({
         title: 'Succès',
-        description: 'Profil mis à jour avec succès',
+        description: data.message || 'Profil mis à jour avec succès',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error);
+      const errorMsg = extractErrorMessages(error) || 'Échec de la mise à jour du profil';
       toast({
         title: 'Erreur',
-        description: 'Échec de la mise à jour du profil',
+        description: errorMsg,
         variant: 'destructive',
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleConfirmPasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setChangingPassword(true);
+    setPasswordError("");
+    try {
+      const data = await apiFetch(`${baseUrl}/api/auth/password-update/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          old_password: oldPassword,
+          new_password: newPassword,
+        }),
+      });
+      toast({
+        title: "Succès",
+        description: data.message || "Votre mot de passe a été mis à jour.",
+      });
+      setShowPasswordChange(false);
+      setOldPassword("");
+      setNewPassword("");
+    } catch (error: any) {
+      const errorMsg = extractErrorMessages(error) || "Ancien mot de passe incorrect ou erreur serveur.";
+      setPasswordError(errorMsg);
+      toast({
+        title: "Erreur",
+        description: errorMsg,
+        variant: "destructive",
+      });
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -196,8 +221,8 @@ export default function ProfilePage() {
           </p>
         </div>
         {!editing ? (
-          <Button 
-            onClick={() => setEditing(true)} 
+          <Button
+            onClick={() => setEditing(true)}
             variant="outline"
             className="flex items-center gap-2 hover-lift"
           >
@@ -206,17 +231,17 @@ export default function ProfilePage() {
           </Button>
         ) : (
           <div className="flex gap-2">
-            <Button 
-              onClick={() => setEditing(false)} 
-              variant="outline" 
+            <Button
+              onClick={() => setEditing(false)}
+              variant="outline"
               disabled={loading}
               className="flex items-center gap-2 hover-lift"
             >
               <X className="h-4 w-4" />
               Annuler
             </Button>
-            <Button 
-              onClick={handleSubmit} 
+            <Button
+              onClick={handleSubmit}
               disabled={loading}
               className="hover-lift"
             >
@@ -249,10 +274,10 @@ export default function ProfilePage() {
             <div>
               <div className="text-3xl font-bold text-foreground">{profile.display_name}</div>
               <div className="text-muted-foreground mt-1">
-                Membre depuis {new Date(profile.created_at).toLocaleDateString()}
+                Membre depuis {new Date(profile.created_at).toLocaleString()}
               </div>
               <div className="flex items-center gap-2 mt-2">
-                <Badge 
+                <Badge
                   variant={profile.is_active ? "default" : "secondary"}
                 >
                   <div className="flex items-center gap-1">
@@ -412,7 +437,7 @@ export default function ProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <div className="text-sm font-medium text-foreground">Statut du compte</div>
-                  <Badge 
+                  <Badge
                     variant={profile.is_active ? "default" : "secondary"}
                   >
                     <div className="flex items-center gap-1">
@@ -457,10 +482,91 @@ export default function ProfilePage() {
                 <div className="space-y-2">
                   <div className="text-sm font-medium text-foreground">Dernière mise à jour</div>
                   <div className="text-foreground">
-                    {new Date(profile.updated_at).toLocaleDateString()}
+                    {new Date(profile.updated_at).toLocaleString()}
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Password Management */}
+            <div className="space-y-4 pt-6 border-t border-border/50">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <div className="p-2 bg-red-500/10 rounded-lg">
+                  <Shield className="h-4 w-4 text-red-500" />
+                </div>
+                <span>Sécurité</span>
+              </h3>
+
+              {!showPasswordChange ? (
+                <div className="bg-muted/30 p-4 rounded-lg flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-foreground">Mot de passe</div>
+                    <div className="text-sm text-muted-foreground">Changez votre mot de passe pour sécuriser votre compte</div>
+                  </div>
+                  <Button
+                    onClick={() => setShowPasswordChange(true)}
+                    disabled={changingPassword}
+                    variant="outline"
+                  >
+                    Changer le mot de passe
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handleConfirmPasswordChange} className="bg-muted/30 p-6 rounded-lg space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="old_password">Ancien mot de passe</Label>
+                      <Input
+                        id="old_password"
+                        type="password"
+                        value={oldPassword}
+                        onChange={(e) => setOldPassword(e.target.value)}
+                        placeholder="Mot de passe actuel"
+                        required
+                        className="minimal-input"
+                        variant="minimal"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="new_password">Nouveau mot de passe</Label>
+                      <Input
+                        id="new_password"
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Nouveau mot de passe"
+                        required
+                        className="minimal-input"
+                        variant="minimal"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setShowPasswordChange(false)}
+                      disabled={changingPassword}
+                    >
+                      Annuler
+                    </Button>
+                    <Button type="submit" disabled={changingPassword}>
+                      {changingPassword ? "Mise à jour..." : "Confirmer le changement"}
+                    </Button>
+                  </div>
+
+                  {passwordError && (
+                    <div className="mt-4">
+                      <ErrorDisplay
+                        error={passwordError}
+                        variant="inline"
+                        showRetry={false}
+                        className="bg-destructive/10 border border-destructive/20 rounded-lg p-4"
+                      />
+                    </div>
+                  )}
+                </form>
+              )}
             </div>
           </div>
         </CardContent>

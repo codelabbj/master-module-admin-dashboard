@@ -17,8 +17,12 @@ import { clearTokens } from "@/lib/api"
 const appName = process.env.NEXT_PUBLIC_APP_NAME || "Flashpay Module"
 const appShortName = process.env.NEXT_PUBLIC_APP_SHORT_NAME || "BP"
 
-export function Sidebar() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+interface SidebarProps {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+}
+
+export function Sidebar({ open: sidebarOpen, setOpen: setSidebarOpen }: SidebarProps) {
   const [expandedItems, setExpandedItems] = useState<string[]>([])
   const router = useRouter()
   const pathname = usePathname()
@@ -278,17 +282,6 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Mobile menu button */}
-      <div className="lg:hidden">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="fixed top-4 left-4 z-40 bg-background/95 backdrop-blur-xl shadow-elevated border border-border/50"
-          onClick={() => setSidebarOpen(true)}
-        >
-          <Menu className="h-4 w-4" />
-        </Button>
-      </div>
     </>
   )
 }

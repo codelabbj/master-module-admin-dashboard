@@ -375,7 +375,7 @@ export default function TopupPage() {
 										<TableCell className="text-muted-foreground">{topup.user_email}</TableCell>
 										<TableCell className="font-mono text-sm">{topup.reference}</TableCell>
 										<TableCell className="text-muted-foreground">
-											{topup.created_at ? new Date(topup.created_at).toLocaleDateString() : "-"}
+											{topup.created_at ? new Date(topup.created_at).toLocaleString() : "-"}
 										</TableCell>
 										<TableCell>
 											<div className="flex gap-2 items-center">

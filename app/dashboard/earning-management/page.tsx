@@ -441,7 +441,7 @@ export default function EarningManagementPage() {
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">
-                            {earning.created_at ? new Date(earning.created_at).toLocaleDateString() : 'N/A'}
+                            {earning.created_at ? new Date(earning.created_at).toLocaleString() : 'N/A'}
                           </span>
                         </div>
                       </TableCell>
@@ -566,7 +566,7 @@ export default function EarningManagementPage() {
                   <label className="text-sm font-medium text-muted-foreground">Période</label>
                   <span className="text-sm">
                     {detailEarning.period_start && detailEarning.period_end ?
-                      `${new Date(detailEarning.period_start).toLocaleDateString()} - ${new Date(detailEarning.period_end).toLocaleDateString()}` :
+                      `${new Date(detailEarning.period_start).toLocaleString()} - ${new Date(detailEarning.period_end).toLocaleString()}` :
                       'N/A'
                     }
                   </span>

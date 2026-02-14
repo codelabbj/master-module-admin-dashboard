@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { useState } from "react"
 
 import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
@@ -11,6 +12,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   // Get token from localStorage (set in sign-in-form.tsx after login)
   let token = "";
   if (typeof window !== "undefined") {
@@ -19,9 +21,9 @@ export default function DashboardLayout({
   return (
     <WebSocketProvider token={token}>
       <div className="min-h-screen bg-background">
-        <Sidebar />
+        <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
         <div className="lg:pl-72">
-          <Header />
+          <Header onMenuClick={() => setSidebarOpen(true)} />
           <main className="min-h-screen">
             <div className="container-minimal py-8">
               <div className="animate-fade-in">

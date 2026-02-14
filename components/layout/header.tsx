@@ -1,6 +1,7 @@
 "use client"
 
 import { usePathname } from "next/navigation"
+import Link from "next/link"
 import { Bell, LogOut, Settings, User, Search, Menu } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -31,7 +32,11 @@ const pageNames: Record<string, string> = {
   "/dashboard/momo-pay": "MoMo Pay",
 }
 
-export function Header() {
+interface HeaderProps {
+  onMenuClick?: () => void
+}
+
+export function Header({ onMenuClick }: HeaderProps) {
   const pathname = usePathname()
   const { t } = useLanguage()
 
@@ -42,11 +47,21 @@ export function Header() {
       <div className="container-minimal flex h-16 items-center justify-between">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+            {/* Hamburger Menu for Mobile */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden h-8 w-8"
+              onClick={onMenuClick}
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
+
+            {/* <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
               <span className="text-primary-foreground font-bold text-sm">BP</span>
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold text-foreground tracking-tight">
+            </div> */}
+            <div className="truncate">
+              <h1 className="text-lg font-semibold text-foreground tracking-tight truncate">
                 {t(pageTitle)}
               </h1>
               <p className="text-xs text-muted-foreground">Admin Dashboard</p>
@@ -109,9 +124,11 @@ export function Header() {
                 </div>
               </div>
               <div className="p-2">
-                <DropdownMenuItem className="rounded-lg">
-                  <User className="mr-3 h-4 w-4" />
-                  <a href="/dashboard/profile">Profile</a>
+                <DropdownMenuItem className="rounded-lg" asChild>
+                  <Link href="/dashboard/profile" className="flex items-center w-full">
+                    <User className="mr-3 h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem className="rounded-lg">
                   <Settings className="mr-3 h-4 w-4" />

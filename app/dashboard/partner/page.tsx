@@ -485,7 +485,7 @@ export default function PartnerPage() {
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Calendar className="h-4 w-4" />
                           <span className="text-sm">
-                            {partner.created_at ? new Date(partner.created_at).toLocaleDateString() : 'N/A'}
+                            {partner.created_at ? new Date(partner.created_at).toLocaleString() : 'N/A'}
                           </span>
                         </div>
                       </TableCell>

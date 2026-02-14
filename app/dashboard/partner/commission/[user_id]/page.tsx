@@ -288,7 +288,7 @@ export default function CommissionStatPage({ params }: { params: { user_id: stri
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Début de période</p>
                     <p className="text-foreground">
-                      {stats.period_info?.start ? new Date(stats.period_info.start).toLocaleDateString() : 'Non défini'}
+                      {stats.period_info?.start ? new Date(stats.period_info.start).toLocaleString() : 'Non défini'}
                     </p>
                   </div>
                 </div>
@@ -297,7 +297,7 @@ export default function CommissionStatPage({ params }: { params: { user_id: stri
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Fin de période</p>
                     <p className="text-foreground">
-                      {stats.period_info?.end ? new Date(stats.period_info.end).toLocaleDateString() : 'Non défini'}
+                      {stats.period_info?.end ? new Date(stats.period_info.end).toLocaleString() : 'Non défini'}
                     </p>
                   </div>
                 </div>
@@ -328,7 +328,7 @@ export default function CommissionStatPage({ params }: { params: { user_id: stri
                           </p>
                           <p className="text-sm text-muted-foreground">
                             {commission.period_start && commission.period_end ?
-                              `${new Date(commission.period_start).toLocaleDateString()} - ${new Date(commission.period_end).toLocaleDateString()}` :
+                              `${new Date(commission.period_start).toLocaleString()} - ${new Date(commission.period_end).toLocaleString()}` :
                               'Période non spécifiée'
                             }
                           </p>

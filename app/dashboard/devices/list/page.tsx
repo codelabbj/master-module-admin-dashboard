@@ -419,7 +419,10 @@ export default function DevicesListPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                        {device.created_at ? new Date(device.created_at).toLocaleDateString() : "N/A"}
+                        {device.created_at ? new Date(device.created_at).toLocaleString() : "N/A"}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                        {device.last_activity ? new Date(device.last_activity).toLocaleString() : 'Jamais'}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">

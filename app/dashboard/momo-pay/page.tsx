@@ -499,7 +499,7 @@ export default function MomoPayPage() {
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">
-                            {new Date(transaction.created_at).toLocaleDateString()}
+                            {new Date(transaction.created_at).toLocaleString()}
                           </span>
                         </div>
                       </TableCell>

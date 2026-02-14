@@ -38,6 +38,9 @@ export function SignInForm() {
   const { t } = useLanguage()
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
   const [showPassword, setShowPassword] = useState(false)
+  const [authMode, setAuthMode] = useState<"login" | "forgot-password" | "reset-confirm" | "reset-success">("login")
+  const [resetCode, setResetCode] = useState("")
+  const [newPassword, setNewPassword] = useState("")
   const apiFetch = useApi();
   const { toast } = useToast();
   const appName = process.env.NEXT_PUBLIC_APP_NAME || "Flashpay Module";
@@ -118,6 +121,66 @@ export function SignInForm() {
     }
   }
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setLoading(true)
+    try {
+      await apiFetch(`${baseUrl}/api/auth/password-reset/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier }),
+      })
+      toast({
+        title: "OTP Envoyé",
+        description: "Un code de vérification a été envoyé à votre identifiant.",
+      })
+      setAuthMode("reset-confirm")
+    } catch (err: any) {
+      const backendError = extractErrorMessages(err) || "Échec de l'envoi de l'OTP"
+      setError(backendError)
+      toast({
+        title: "Erreur",
+        description: backendError,
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResetConfirm = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setLoading(true)
+    try {
+      await apiFetch(`${baseUrl}/api/auth/password-reset/confirm/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          identifier,
+          code: resetCode,
+          new_password: newPassword
+        }),
+      })
+      toast({
+        title: "Succès",
+        description: "Votre mot de passe a été réinitialisé avec succès.",
+      })
+      setAuthMode("reset-success")
+    } catch (err: any) {
+      const backendError = extractErrorMessages(err) || "Échec de la réinitialisation"
+      setError(backendError)
+      toast({
+        title: "Erreur",
+        description: backendError,
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <div className="w-full max-w-md space-y-8">
@@ -174,60 +237,68 @@ export function SignInForm() {
           </CardHeader>
 
           <CardContent className="space-y-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
-
-              {/* Email Input */}
-              <div className="space-y-3">
-                <Label htmlFor="email" className="text-sm font-medium text-foreground flex items-center space-x-2">
-                  <Mail className="h-4 w-4 text-primary" />
-                  <span>Email ou identifiant</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="john@example.com"
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
-                    required
-                    className="minimal-input pl-12"
-                    variant="minimal"
-                  />
-                  <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            {authMode === "login" && (
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Email Input */}
+                <div className="space-y-3">
+                  <Label htmlFor="email" className="text-sm font-medium text-foreground flex items-center space-x-2">
+                    <Mail className="h-4 w-4 text-primary" />
+                    <span>Email ou identifiant</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="email"
+                      type="text"
+                      placeholder="john@example.com"
+                      value={identifier}
+                      onChange={(e) => setIdentifier(e.target.value)}
+                      required
+                      className="minimal-input pl-12"
+                      variant="minimal"
+                    />
+                    <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  </div>
                 </div>
-              </div>
 
-              {/* Password Input */}
-              <div className="space-y-3">
-                <Label htmlFor="password" className="text-sm font-medium text-foreground flex items-center space-x-2">
-                  <Lock className="h-4 w-4 text-primary" />
-                  <span>Mot de passe</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="minimal-input pl-12 pr-12"
-                    variant="minimal"
-                  />
-                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <button
-                    type="button"
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-200"
-                    onClick={() => setShowPassword((v) => !v)}
-                    tabIndex={-1}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
+                {/* Password Input */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password" className="text-sm font-medium text-foreground flex items-center space-x-2">
+                      <Lock className="h-4 w-4 text-primary" />
+                      <span>Mot de passe</span>
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={() => setAuthMode("forgot-password")}
+                      className="text-sm text-primary hover:underline font-medium"
+                    >
+                      Mot de passe oublié ?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="minimal-input pl-12 pr-12"
+                      variant="minimal"
+                    />
+                    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <button
+                      type="button"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-200"
+                      onClick={() => setShowPassword((v) => !v)}
+                      tabIndex={-1}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              {/* Remember Me & Forgot Password */}
-              <div className="flex items-center justify-between">
+                {/* Remember Me */}
                 <div className="flex items-center space-x-3">
                   <Checkbox
                     id="remember"
@@ -238,39 +309,168 @@ export function SignInForm() {
                     Se souvenir de moi
                   </Label>
                 </div>
-              </div>
 
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                className="w-full py-3 hover-lift"
-                disabled={loading}
-              >
-                {loading ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Connexion...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <span>Se connecter</span>
-                    <ArrowRight className="h-4 w-4" />
+                {/* Submit Button */}
+                <Button
+                  type="submit"
+                  className="w-full py-3 hover-lift"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Connexion...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <span>Se connecter</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </div>
+                  )}
+                </Button>
+
+                {/* Error Display */}
+                {error && (
+                  <div className="mt-4">
+                    <ErrorDisplay
+                      error={error}
+                      variant="inline"
+                      showRetry={false}
+                      className="bg-destructive/10 border border-destructive/20 rounded-lg p-4"
+                    />
                   </div>
                 )}
-              </Button>
+              </form>
+            )}
 
-              {/* Error Display */}
-              {error && (
-                <div className="mt-4">
-                  <ErrorDisplay
-                    error={error}
-                    variant="inline"
-                    showRetry={false}
-                    className="bg-destructive/10 border border-destructive/20 rounded-lg p-4"
+            {authMode === "forgot-password" && (
+              <form onSubmit={handleForgotPassword} className="space-y-6">
+                <div className="space-y-2 text-center">
+                  <h3 className="text-xl font-semibold">Mot de passe oublié</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Entrez votre email ou identifiant pour recevoir un code de réinitialisation.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="reset-identifier" className="text-sm font-medium text-foreground flex items-center space-x-2">
+                    <Mail className="h-4 w-4 text-primary" />
+                    <span>Email ou identifiant</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="reset-identifier"
+                      type="text"
+                      placeholder="john@example.com"
+                      value={identifier}
+                      onChange={(e) => setIdentifier(e.target.value)}
+                      required
+                      className="minimal-input pl-12"
+                      variant="minimal"
+                    />
+                    <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <Button type="submit" className="w-full py-3 hover-lift" disabled={loading}>
+                    {loading ? "Envoi en cours..." : "Recevoir le code"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setAuthMode("login")}
+                    className="w-full"
+                  >
+                    Retour à la connexion
+                  </Button>
+                </div>
+
+                {error && <ErrorDisplay error={error} variant="inline" showRetry={false} />}
+              </form>
+            )}
+
+            {authMode === "reset-confirm" && (
+              <form onSubmit={handleResetConfirm} className="space-y-6">
+                <div className="space-y-2 text-center">
+                  <h3 className="text-xl font-semibold">Réinitialisation</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Entrez le code reçu et votre nouveau mot de passe.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="otp-code" className="text-sm font-medium">Code OTP</Label>
+                  <Input
+                    id="otp-code"
+                    type="text"
+                    placeholder="123456"
+                    value={resetCode}
+                    onChange={(e) => setResetCode(e.target.value)}
+                    required
+                    className="minimal-input"
+                    variant="minimal"
                   />
                 </div>
-              )}
-            </form>
+
+                <div className="space-y-3">
+                  <Label htmlFor="new-password" className="text-sm font-medium">Nouveau mot de passe</Label>
+                  <div className="relative">
+                    <Input
+                      id="new-password"
+                      type={showPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                      className="minimal-input pr-12"
+                      variant="minimal"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <Button type="submit" className="w-full py-3 hover-lift" disabled={loading}>
+                    {loading ? "Réinitialisation..." : "Confirmer le changement"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setAuthMode("forgot-password")}
+                    className="w-full"
+                  >
+                    Retour
+                  </Button>
+                </div>
+
+                {error && <ErrorDisplay error={error} variant="inline" showRetry={false} />}
+              </form>
+            )}
+
+            {authMode === "reset-success" && (
+              <div className="space-y-6 text-center py-4">
+                <div className="flex justify-center">
+                  <div className="p-4 bg-green-500/10 rounded-full">
+                    <CheckCircle className="h-12 w-12 text-green-500" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold">C'est fait !</h3>
+                  <p className="text-muted-foreground">
+                    Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter.
+                  </p>
+                </div>
+                <Button onClick={() => setAuthMode("login")} className="w-full py-3 hover-lift">
+                  Se connecter
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

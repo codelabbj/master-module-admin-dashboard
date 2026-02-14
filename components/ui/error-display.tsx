@@ -20,37 +20,45 @@ interface ErrorDisplayProps {
 export function extractErrorMessages(errorObj: any): string {
   // Handle null/undefined
   if (!errorObj) return "An unknown error occurred"
-  
+
   // Handle strings (already extracted)
   if (typeof errorObj === "string") return errorObj
-  
+
   // Handle non-objects
   if (typeof errorObj !== "object") return String(errorObj)
-  
+
   // Handle arrays
   if (Array.isArray(errorObj)) {
     return errorObj.map(item => extractErrorMessages(item)).join(" ")
   }
-  
+
   // Handle objects - check for common error fields
   if (errorObj.detail) return errorObj.detail
   if (errorObj.message) return errorObj.message
   if (errorObj.error) return errorObj.error
   if (errorObj.msg) return errorObj.msg
-  
+
   // Handle field-specific errors (e.g., {"email": ["This field is required"]})
   const fieldErrors = Object.entries(errorObj)
     .filter(([key, value]) => Array.isArray(value) && value.length > 0)
-    .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(", ") : value}`)
+    .map(([key, value]) => {
+      const messages = Array.isArray(value) ? value.join(", ") : String(value)
+      if (key === "non_field_errors" || key === "__all__" || key === "detail" || key === "message") {
+        return messages
+      }
+      // Optional: Replace underscores with spaces and capitalize
+      const formattedKey = key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+      return `${formattedKey}: ${messages}`
+    })
     .join("; ")
-  
+
   if (fieldErrors) return fieldErrors
-  
+
   // Handle other object values
   const values = Object.values(errorObj)
     .map((v) => Array.isArray(v) ? v.join(" ") : String(v))
     .join(" ")
-  
+
   return values || "An unknown error occurred"
 }
 
