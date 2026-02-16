@@ -202,7 +202,7 @@ export default function FcmLogsListPage() {
     if (!data || typeof data !== 'object') return <span className="text-muted-foreground italic">N/A</span>
 
     const entries = Object.entries(data).filter(([key]) =>
-      !['raw_fcm', 'ai_confidence_score', 'confidence'].includes(key.toLowerCase())
+      !['raw_fcm', 'ai_confidence_score', 'confidence', 'wave_payment_data'].includes(key.toLowerCase())
     )
 
     if (entries.length === 0) return <span className="text-muted-foreground italic">N/A</span>

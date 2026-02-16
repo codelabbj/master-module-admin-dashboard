@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useApi } from "@/lib/useApi"
 import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+
 import {
     Dialog,
     DialogContent,
@@ -33,7 +33,6 @@ export function TransactionActionModals({
     onSuccess,
     baseUrl,
 }: TransactionActionModalsProps) {
-    const [reason, setReason] = useState("")
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
     const apiFetch = useApi()
@@ -42,10 +41,10 @@ export function TransactionActionModals({
     const isSuccess = actionType === "success"
     const title = isSuccess ? "Marquer comme succès" : "Marquer comme échec"
     const description = isSuccess
-        ? "Fournir une raison pour marquer cette transaction comme succès."
-        : "Fournir une raison pour marquer cette transaction comme échec."
+        ? "Êtes-vous sûr de vouloir marquer cette transaction comme succès ? Cette action mettra à jour le statut de la transaction."
+        : "Êtes-vous sûr de vouloir marquer cette transaction comme échec ? Cette action mettra à jour le statut de la transaction."
 
-    const defaultReason = isSuccess ? "Mise à jour manuelle : Succès" : "Mise à jour manuelle : Échec"
+    const defaultReason = "Action initiée par l'administrateur"
 
     const handleSubmit = async () => {
         if (!transaction) return
@@ -61,7 +60,7 @@ export function TransactionActionModals({
             await apiFetch(endpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ reason: reason.trim() || defaultReason }),
+                body: JSON.stringify({ reason: defaultReason }),
             })
 
             toast({
@@ -69,7 +68,6 @@ export function TransactionActionModals({
                 description: `La transaction a été marquée comme ${isSuccess ? "succès" : "échec"} avec succès.`,
             })
 
-            setReason("")
             onSuccess()
             onClose()
         } catch (err: any) {
@@ -93,17 +91,7 @@ export function TransactionActionModals({
                     <DialogDescription>{description}</DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Raison</label>
-                        <Input
-                            placeholder={defaultReason}
-                            value={reason}
-                            onChange={(e) => setReason(e.target.value)}
-                            disabled={loading}
-                        />
-                    </div>
-
+                <div className="py-4">
                     {error && (
                         <ErrorDisplay
                             error={error}

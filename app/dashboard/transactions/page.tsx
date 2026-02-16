@@ -114,30 +114,22 @@ export default function TransactionsPage() {
 
   // Retry modal state
   const [retryModalOpen, setRetryModalOpen] = useState(false)
-  const [retryReason, setRetryReason] = useState("")
   const [retryLoading, setRetryLoading] = useState(false)
-  const [retryError, setRetryError] = useState("")
   const [retryTransaction, setRetryTransaction] = useState<any | null>(null)
 
   // Cancel modal state
   const [cancelModalOpen, setCancelModalOpen] = useState(false)
-  const [cancelReason, setCancelReason] = useState("")
   const [cancelLoading, setCancelLoading] = useState(false)
-  const [cancelError, setCancelError] = useState("")
   const [cancelTransaction, setCancelTransaction] = useState<any | null>(null)
 
   // Mark as success modal state
   const [successModalOpen, setSuccessModalOpen] = useState(false)
-  const [successReason, setSuccessReason] = useState("")
   const [successLoading, setSuccessLoading] = useState(false)
-  const [successError, setSuccessError] = useState("")
   const [successTransaction, setSuccessTransaction] = useState<any | null>(null)
 
   // Mark as failed modal state
   const [failedModalOpen, setFailedModalOpen] = useState(false)
-  const [failedReason, setFailedReason] = useState("")
   const [failedLoading, setFailedLoading] = useState(false)
-  const [failedError, setFailedError] = useState("")
   const [failedTransaction, setFailedTransaction] = useState<any | null>(null)
 
   // Edit form state
@@ -540,26 +532,19 @@ export default function TransactionsPage() {
   // Open retry modal
   const openRetryModal = (tx: any) => {
     setRetryTransaction(tx)
-    setRetryReason("")
-    setRetryError("")
     setRetryModalOpen(true)
   }
 
   // Submit retry request
   const handleRetrySubmit = async () => {
     if (!retryTransaction) return
-    if (!retryReason.trim()) {
-      setRetryError("La raison est requise")
-      return
-    }
     setRetryLoading(true)
-    setRetryError("")
     try {
       const endpoint = `${baseUrl}/api/payments/transactions/${retryTransaction.uid}/retry/`
       await apiWithRetry(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: retryReason.trim() }),
+        body: JSON.stringify({ reason: "Action initiée par l'administrateur" }),
       })
       toast({
         title: "Relance en file d'attente",
@@ -567,42 +552,33 @@ export default function TransactionsPage() {
       })
       setRetryModalOpen(false)
       setRetryTransaction(null)
-      setRetryReason("")
       // Refresh list
       setCurrentPage(1)
       router.refresh()
       await fetchTransactions()
     } catch (err: any) {
       const errorMessage = err?.message || "Échec de la relance de la transaction"
-      setRetryError(errorMessage)
       toast({ title: "Échec de la relance", description: errorMessage, variant: "destructive" })
     } finally {
       setRetryLoading(false)
     }
   }
 
-  // Open/submit cancel
+  // Open cancel modal
   const openCancelModal = (tx: any) => {
     setCancelTransaction(tx)
-    setCancelReason("")
-    setCancelError("")
     setCancelModalOpen(true)
   }
 
   const handleCancelSubmit = async () => {
     if (!cancelTransaction) return
-    if (!cancelReason.trim()) {
-      setCancelError("La raison est requise")
-      return
-    }
     setCancelLoading(true)
-    setCancelError("")
     try {
       const endpoint = `${baseUrl}/api/payments/transactions/${cancelTransaction.uid}/cancel/`
       await apiWithRetry(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: cancelReason.trim() }),
+        body: JSON.stringify({ reason: "Action initiée par l'administrateur" }),
       })
       toast({
         title: "Annulation en file d'attente",
@@ -610,41 +586,32 @@ export default function TransactionsPage() {
       })
       setCancelModalOpen(false)
       setCancelTransaction(null)
-      setCancelReason("")
       setCurrentPage(1)
       router.refresh()
       await fetchTransactions()
     } catch (err: any) {
       const errorMessage = err?.message || "Échec de l'annulation de la transaction"
-      setCancelError(errorMessage)
       toast({ title: "Échec de l'annulation", description: errorMessage, variant: "destructive" })
     } finally {
       setCancelLoading(false)
     }
   }
 
-  // Open/submit success
+  // Open success modal
   const openSuccessModal = (tx: any) => {
     setSuccessTransaction(tx)
-    setSuccessReason("")
-    setSuccessError("")
     setSuccessModalOpen(true)
   }
 
   const handleSuccessSubmit = async () => {
     if (!successTransaction) return
-    if (!successReason.trim()) {
-      setSuccessError("La raison est requise")
-      return
-    }
     setSuccessLoading(true)
-    setSuccessError("")
     try {
       const endpoint = `${baseUrl}/api/payments/transactions/${successTransaction.uid}/success/`
       await apiWithRetry(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: successReason.trim() }),
+        body: JSON.stringify({ reason: "Action initiée par l'administrateur" }),
       })
       toast({
         title: "Succès en file d'attente",
@@ -652,41 +619,32 @@ export default function TransactionsPage() {
       })
       setSuccessModalOpen(false)
       setSuccessTransaction(null)
-      setSuccessReason("")
       setCurrentPage(1)
       router.refresh()
       await fetchTransactions()
     } catch (err: any) {
       const errorMessage = err?.message || "Échec du marquage de la transaction comme succès"
-      setSuccessError(errorMessage)
       toast({ title: "Échec du marquage comme succès", description: errorMessage, variant: "destructive" })
     } finally {
       setSuccessLoading(false)
     }
   }
 
-  // Open/submit failed
+  // Open failed modal
   const openFailedModal = (tx: any) => {
     setFailedTransaction(tx)
-    setFailedReason("")
-    setFailedError("")
     setFailedModalOpen(true)
   }
 
   const handleFailedSubmit = async () => {
     if (!failedTransaction) return
-    if (!failedReason.trim()) {
-      setFailedError("La raison est requise")
-      return
-    }
     setFailedLoading(true)
-    setFailedError("")
     try {
       const endpoint = `${baseUrl}/api/payments/transactions/${failedTransaction.uid}/mark-failed/`
       await apiWithRetry(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: failedReason.trim() }),
+        body: JSON.stringify({ reason: "Action initiée par l'administrateur" }),
       })
       toast({
         title: "Échec en file d'attente",
@@ -694,13 +652,11 @@ export default function TransactionsPage() {
       })
       setFailedModalOpen(false)
       setFailedTransaction(null)
-      setFailedReason("")
       setCurrentPage(1)
       router.refresh()
       await fetchTransactions()
     } catch (err: any) {
       const errorMessage = err?.message || "Échec du marquage de la transaction comme échec"
-      setFailedError(errorMessage)
       toast({ title: "Échec du marquage comme échec", description: errorMessage, variant: "destructive" })
     } finally {
       setFailedLoading(false)
@@ -1360,28 +1316,17 @@ export default function TransactionsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Relancer la transaction</DialogTitle>
-            <DialogDescription>Fournir une raison pour relancer cette transaction.</DialogDescription>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir relancer cette transaction ? Cette action enverra une demande de relance.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <label className="block text-sm font-medium">
-              Raison
-            </label>
-            <Input
-              placeholder="Tentative de relance après timeout"
-              value={retryReason}
-              onChange={(e) => setRetryReason(e.target.value)}
-            />
-            {retryError && (
-              <ErrorDisplay error={retryError} variant="inline" showRetry={false} className="mb-2" />
-            )}
-          </div>
           <DialogFooter>
-            <Button onClick={handleRetrySubmit} disabled={retryLoading}>
-              {retryLoading ? "Envoi..." : "Soumettre"}
-            </Button>
             <DialogClose asChild>
-              <Button type="button" variant="outline">Annuler</Button>
+              <Button type="button" variant="outline" disabled={retryLoading}>Annuler</Button>
             </DialogClose>
+            <Button onClick={handleRetrySubmit} disabled={retryLoading}>
+              {retryLoading ? "Envoi..." : "Confirmer"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1391,28 +1336,17 @@ export default function TransactionsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Annuler la transaction</DialogTitle>
-            <DialogDescription>Fournir une raison pour annuler cette transaction.</DialogDescription>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir annuler cette transaction ? Cette action enverra une demande d'annulation.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <label className="block text-sm font-medium">
-              Raison
-            </label>
-            <Input
-              placeholder="Tentative de relance après timeout"
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-            />
-            {cancelError && (
-              <ErrorDisplay error={cancelError} variant="inline" showRetry={false} className="mb-2" />
-            )}
-          </div>
           <DialogFooter>
-            <Button onClick={handleCancelSubmit} disabled={cancelLoading}>
-              {cancelLoading ? "Envoi..." : "Soumettre"}
-            </Button>
             <DialogClose asChild>
-              <Button type="button" variant="outline">Annuler</Button>
+              <Button type="button" variant="outline" disabled={cancelLoading}>Annuler</Button>
             </DialogClose>
+            <Button onClick={handleCancelSubmit} disabled={cancelLoading}>
+              {cancelLoading ? "Envoi..." : "Confirmer"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1422,28 +1356,17 @@ export default function TransactionsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Marquer la transaction comme succès</DialogTitle>
-            <DialogDescription>Fournir une raison pour marquer cette transaction comme succès.</DialogDescription>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir marquer cette transaction comme succès ? Cette action mettra à jour le statut de la transaction.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <label className="block text-sm font-medium">
-              Raison
-            </label>
-            <Input
-              placeholder="Tentative de relance après timeout"
-              value={successReason}
-              onChange={(e) => setSuccessReason(e.target.value)}
-            />
-            {successError && (
-              <ErrorDisplay error={successError} variant="inline" showRetry={false} className="mb-2" />
-            )}
-          </div>
           <DialogFooter>
-            <Button onClick={handleSuccessSubmit} disabled={successLoading}>
-              {successLoading ? "Envoi..." : "Soumettre"}
-            </Button>
             <DialogClose asChild>
-              <Button type="button" variant="outline">Annuler</Button>
+              <Button type="button" variant="outline" disabled={successLoading}>Annuler</Button>
             </DialogClose>
+            <Button onClick={handleSuccessSubmit} disabled={successLoading}>
+              {successLoading ? "Envoi..." : "Confirmer"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1453,28 +1376,17 @@ export default function TransactionsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Marquer la transaction comme échec</DialogTitle>
-            <DialogDescription>Fournir une raison pour marquer cette transaction comme échec.</DialogDescription>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir marquer cette transaction comme échec ? Cette action mettra à jour le statut de la transaction.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <label className="block text-sm font-medium">
-              Raison
-            </label>
-            <Input
-              placeholder="Tentative de relance après timeout"
-              value={failedReason}
-              onChange={(e) => setFailedReason(e.target.value)}
-            />
-            {failedError && (
-              <ErrorDisplay error={failedError} variant="inline" showRetry={false} className="mb-2" />
-            )}
-          </div>
           <DialogFooter>
-            <Button onClick={handleFailedSubmit} disabled={failedLoading}>
-              {failedLoading ? "Envoi..." : "Soumettre"}
-            </Button>
             <DialogClose asChild>
-              <Button type="button" variant="outline">Annuler</Button>
+              <Button type="button" variant="outline" disabled={failedLoading}>Annuler</Button>
             </DialogClose>
+            <Button onClick={handleFailedSubmit} disabled={failedLoading}>
+              {failedLoading ? "Envoi..." : "Confirmer"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
