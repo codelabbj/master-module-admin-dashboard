@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { createContext, useContext, useState } from "react"
+import { CONFIG } from "@/lib/config"
 
 type Language = "en" | "fr"
 
@@ -16,7 +17,7 @@ type LanguageProviderState = {
   t: (key: string) => string
 }
 
-const appName = process.env.NEXT_PUBLIC_APP_NAME || "Flashpay Module"
+const appName = CONFIG.APP_NAME
 
 const translations = {
   en: {

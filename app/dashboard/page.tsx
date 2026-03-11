@@ -43,6 +43,7 @@ import {
   TrendingDown
 } from "lucide-react"
 import { ErrorDisplay } from "@/components/ui/error-display"
+import { CONFIG } from "@/lib/config"
 import {
   LineChart as RechartsLineChart,
   Line,
@@ -59,8 +60,6 @@ import {
   AreaChart,
   Area
 } from "recharts"
-
-const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://connect.api.blaffa.net"
 
 // TypeScript interfaces for API responses
 interface DashboardSummary {
@@ -270,15 +269,7 @@ export default function Dashboard() {
       setIsLoading(true)
       setError(null)
 
-      // Check if baseUrl is set
-      if (!baseUrl) {
-        console.error('NEXT_PUBLIC_API_BASE_URL is not set')
-        setError('URL de base de l\'API non configurée')
-        setIsLoading(false)
-        return
-      }
-
-      console.log('Fetching data from:', baseUrl)
+      console.log('Fetching data from:', CONFIG.API_BASE_URL)
 
       // Fetch all API data in parallel with timeout protection and retry
       const [
@@ -291,14 +282,14 @@ export default function Dashboard() {
         momoPayRes,
         waveBusinessRes
       ] = await Promise.allSettled([
-        apiWithRetry(`${baseUrl}/api/payments/dashboard/summary/`),
-        apiWithRetry(`${baseUrl}/api/auth/admin/notifications/stats/`),
-        apiWithRetry(`${baseUrl}/api/payments/stats/transactions/`),
-        apiWithRetry(`${baseUrl}/api/payments/system-events/`),
-        apiWithRetry(`${baseUrl}/api/payments/admin/balance-operations/stats/`),
-        apiWithRetry(`${baseUrl}/api/payments/user/recharge_requests/stats/`),
-        apiWithRetry(`${baseUrl}/api/payments/momo-pay-transactions/stats/`),
-        apiWithRetry(`${baseUrl}/api/payments/wave-business-transactions/stats/`)
+        apiWithRetry(`${CONFIG.API_BASE_URL}/api/payments/dashboard/summary/`),
+        apiWithRetry(`${CONFIG.API_BASE_URL}/api/auth/admin/notifications/stats/`),
+        apiWithRetry(`${CONFIG.API_BASE_URL}/api/payments/stats/transactions/`),
+        apiWithRetry(`${CONFIG.API_BASE_URL}/api/payments/system-events/`),
+        apiWithRetry(`${CONFIG.API_BASE_URL}/api/payments/admin/balance-operations/stats/`),
+        apiWithRetry(`${CONFIG.API_BASE_URL}/api/payments/user/recharge_requests/stats/`),
+        apiWithRetry(`${CONFIG.API_BASE_URL}/api/payments/momo-pay-transactions/stats/`),
+        apiWithRetry(`${CONFIG.API_BASE_URL}/api/payments/wave-business-transactions/stats/`)
       ])
 
       // Process results

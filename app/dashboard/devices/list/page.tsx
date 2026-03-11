@@ -70,7 +70,8 @@ export default function DevicesListPage() {
         if (searchTerm) params.append("search", searchTerm)
 
         const data = await apiFetch(`${baseUrl}/api/payments/stats/devices/?${params.toString()}`)
-        setDevices(data.results || data || [])
+        const devicesData = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : []
+        setDevices(devicesData)
         setTotalCount(data.count || (Array.isArray(data) ? data.length : 0))
         setTotalPages(data.total_pages || Math.ceil((data.count || 0) / itemsPerPage) || 1)
 
@@ -146,7 +147,8 @@ export default function DevicesListPage() {
     setError("")
     try {
       const data = await apiFetch(`${baseUrl}/api/payments/stats/devices/`)
-      setDevices(data.results || data || [])
+      const devicesData = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : []
+      setDevices(devicesData)
       toast({
         title: t("devices.loaded") || "Appareils actualisés",
         description: t("devices.loadedSuccessfully") || "Liste des appareils actualisée avec succès",

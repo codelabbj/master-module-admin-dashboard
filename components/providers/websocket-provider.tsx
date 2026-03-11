@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
+import { CONFIG } from "@/lib/config";
 
 interface WebSocketContextType {
   socket: WebSocket | null;
@@ -25,7 +26,7 @@ export const WebSocketProvider = ({ token, children }: WebSocketProviderProps) =
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
 
-  const wsUrl = `wss://connect.yapson.net/ws/payment/?token=${token}&client_type=admin`;
+  const wsUrl = `${CONFIG.WEBSOCKET_BASE_URL}/ws/payment/?token=${token}&client_type=admin`;
 
   const connectWebSocket = useCallback(() => {
     setConnectionStatus("connecting");

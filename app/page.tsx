@@ -3,8 +3,9 @@ import { SignInForm } from "@/components/auth/sign-in-form"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
+import { CONFIG } from "@/lib/config"
 
-const appName = process.env.NEXT_PUBLIC_APP_NAME || "Flashpay Module"
+const appName = CONFIG.APP_NAME
 
 export default function SignInPage() {
   const router = useRouter()

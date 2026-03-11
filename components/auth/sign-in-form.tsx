@@ -27,6 +27,7 @@ import {
 import { useApi } from "@/lib/useApi"
 import { useToast } from "@/hooks/use-toast"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
+import { CONFIG } from "@/lib/config"
 
 export function SignInForm() {
   const [identifier, setIdentifier] = useState("")
@@ -36,14 +37,14 @@ export function SignInForm() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const { t } = useLanguage()
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+  const baseUrl = CONFIG.API_BASE_URL
   const [showPassword, setShowPassword] = useState(false)
   const [authMode, setAuthMode] = useState<"login" | "forgot-password" | "reset-confirm" | "reset-success">("login")
   const [resetCode, setResetCode] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const apiFetch = useApi();
   const { toast } = useToast();
-  const appName = process.env.NEXT_PUBLIC_APP_NAME || "Flashpay Module";
+  const appName = CONFIG.APP_NAME;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
