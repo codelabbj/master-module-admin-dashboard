@@ -46,7 +46,8 @@ export default function CountryListPage() {
       setError("")
       try {
         const data = await apiFetch(`${baseUrl}/api/payments/countries/`)
-        setCountries(data.results || data || [])
+        const countriesData = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : []
+        setCountries(countriesData)
         toast({
           title: t("country.loaded") || "Pays chargés",
           description: t("country.loadedSuccessfully") || "Liste des pays chargée avec succès",
@@ -100,7 +101,8 @@ export default function CountryListPage() {
     setError("")
     try {
       const data = await apiFetch(`${baseUrl}/api/payments/countries/`)
-      setCountries(data.results || data || [])
+      const countriesData = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : []
+      setCountries(countriesData)
       toast({
         title: t("country.loaded") || "Pays actualisés",
         description: t("country.loadedSuccessfully") || "Liste des pays actualisée avec succès",

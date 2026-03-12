@@ -64,7 +64,7 @@ export function Header({ onMenuClick }: HeaderProps) {
               <h1 className="text-lg font-semibold text-foreground tracking-tight truncate">
                 {t(pageTitle)}
               </h1>
-              <p className="text-xs text-muted-foreground">Admin Dashboard</p>
+              <p className="text-xs text-muted-foreground">{t("layout.subtitle")}</p>
             </div>
           </div>
         </div>

@@ -13,9 +13,11 @@ import {
   Home, DollarSign, Waves, Smartphone, Zap
 } from "lucide-react"
 import { clearTokens } from "@/lib/api"
+import { CONFIG } from "@/lib/config"
+import { navItems } from "@/lib/navigation"
 
-const appName = process.env.NEXT_PUBLIC_APP_NAME || "Flashpay Module"
-const appShortName = process.env.NEXT_PUBLIC_APP_SHORT_NAME || "BP"
+const appName = CONFIG.APP_NAME
+const appShortName = CONFIG.APP_SHORT_NAME
 
 interface SidebarProps {
   open: boolean;
@@ -45,103 +47,23 @@ export function Sidebar({ open: sidebarOpen, setOpen: setSidebarOpen }: SidebarP
     router.push("/");
   }
 
-  const navigationItems = [
-    {
-      name: t("nav.dashboard"),
-      href: "/dashboard",
-      icon: Home,
-      current: pathname === "/dashboard",
-    },
-    {
-      name: t("nav.users"),
-      icon: Users,
-      current: pathname.startsWith("/dashboard/users"),
-      children: [
-        { name: t("nav.register"), href: "/dashboard/users/register" },
-        { name: t("nav.userList"), href: "/dashboard/users/list" },
-      ],
-    },
-    {
-      name: t("nav.transactions"),
-      href: "/dashboard/transactions",
-      icon: CreditCard,
-      current: pathname === "/dashboard/transactions",
-    },
-    {
-      name: t("nav.country"),
-      icon: Globe,
-      current: pathname.startsWith("/dashboard/country"),
-      children: [
-        { name: t("nav.countryList"), href: "/dashboard/country/list" },
-        { name: t("nav.countryCreate"), href: "/dashboard/country/create" },
-      ],
-    },
-    {
-      name: t("nav.network"),
-      icon: Share2,
-      current: pathname.startsWith("/dashboard/network"),
-      children: [
-        { name: t("nav.networkList"), href: "/dashboard/network/list" },
-        { name: t("nav.networkCreate"), href: "/dashboard/network/create" },
-      ],
-    },
-    {
-      name: t("nav.phoneNumbers"),
-      href: "/dashboard/phone-number/list",
-      icon: Phone,
-      current: pathname === "/dashboard/phone-number/list",
-    },
-    {
-      name: t("nav.devices"),
-      icon: Monitor,
-      current: pathname.startsWith("/dashboard/devices"),
-      children: [
-        { name: t("nav.devicesList"), href: "/dashboard/devices/list" },
-      ],
-    },
-    {
-      name: t("nav.smsLogs"),
-      href: "/dashboard/sms-logs/list",
-      icon: MessageCircle,
-      current: pathname === "/dashboard/sms-logs/list",
-    },
-    {
-      name: t("nav.fcmLogs"),
-      href: "/dashboard/fcm-logs/list",
-      icon: Bell,
-      current: pathname === "/dashboard/fcm-logs/list",
-    },
-    {
-      name: t("nav.partner"),
-      href: "/dashboard/partner",
-      icon: User,
-      current: pathname === "/dashboard/partner",
-    },
-    {
-      name: t("topup.title"),
-      href: "/dashboard/topup",
-      icon: DollarSign,
-      current: pathname === "/dashboard/topup",
-    },
-    {
-      name: t("earning.title"),
-      href: "/dashboard/earning-management",
-      icon: BarChart3,
-      current: pathname === "/dashboard/earning-management",
-    },
-    {
-      name: t("Wave Business Transaction"),
-      href: "/dashboard/wave-business-transaction",
-      icon: Waves,
-      current: pathname === "/dashboard/wave-business-transaction",
-    },
-    {
-      name: "MoMo Pay",
-      href: "/dashboard/momo-pay",
-      icon: Smartphone,
-      current: pathname === "/dashboard/momo-pay",
-    },
-  ]
+  // Filter navigation items based on feature flags
+  const filteredNavigationItems = navItems.filter(item => {
+    if (item.feature === null) return true
+    return CONFIG.FEATURES[item.feature]
+  }).map(item => ({
+    name: item.label,
+    href: item.href,
+    icon: item.icon,
+    current: pathname === item.href || pathname.startsWith(item.href + "/"),
+    children: item.children?.filter(child => {
+      if (child.feature === null) return true
+      return CONFIG.FEATURES[child.feature]
+    }).map(child => ({
+      name: child.label,
+      href: child.href,
+    })),
+  }))
 
   const NavItem = ({ item }: { item: any }) => {
     const isExpanded = expandedItems.includes(item.name)
@@ -230,7 +152,7 @@ export function Sidebar({ open: sidebarOpen, setOpen: setSidebarOpen }: SidebarP
           </div>
 
           <nav className="flex-1 min-h-0 space-y-2 p-4 overflow-y-auto">
-            {navigationItems.map((item) => (
+            {filteredNavigationItems.map((item) => (
               <NavItem key={item.name} item={item} />
             ))}
           </nav>
@@ -264,7 +186,7 @@ export function Sidebar({ open: sidebarOpen, setOpen: setSidebarOpen }: SidebarP
           </div>
 
           <nav className="flex-1 min-h-0 space-y-2 p-4 overflow-y-auto">
-            {navigationItems.map((item) => (
+            {filteredNavigationItems.map((item) => (
               <NavItem key={item.name} item={item} />
             ))}
           </nav>

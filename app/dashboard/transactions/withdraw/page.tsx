@@ -1,396 +1,287 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { useEffect, useState, useMemo } from "react"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import Link from "next/link"
 import { useApi } from "@/lib/useApi"
-import { useRouter } from "next/navigation"
+import { useLanguage } from "@/components/providers/language-provider"
+import { 
+  Search, 
+  ArrowUpDown, 
+  CreditCard, 
+  Filter,
+  RefreshCw
+} from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
-import { useLanguage } from "@/components/providers/language-provider"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { ArrowLeft, DollarSign, Phone, Network, FileText, CheckCircle, AlertTriangle, Loader2, TrendingDown } from "lucide-react"
-
-// Colors for consistent theming
-const COLORS = {
-  primary: '#3B82F6',
-  secondary: '#10B981', 
-  accent: '#F59E0B',
-  danger: '#EF4444',
-  warning: '#F97316',
-  success: '#22C55E',
-  info: '#06B6D4',
-  purple: '#8B5CF6',
-  pink: '#EC4899',
-  indigo: '#6366F1'
-};
+import { Badge } from "@/components/ui/badge"
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
-export default function WithdrawPage() {
-  const [networks, setNetworks] = useState<any[]>([])
-  const [network, setNetwork] = useState("")
-  const [amount, setAmount] = useState("")
-  const [recipientPhone, setRecipientPhone] = useState("")
-  const [confirmRecipientPhone, setConfirmRecipientPhone] = useState("")
-  const [objet, setObjet] = useState("")
+export default function WithdrawTransactionsPage() {
+  const [transactions, setTransactions] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [confirmDetails, setConfirmDetails] = useState(false)
-  const [showConfirmModal, setShowConfirmModal] = useState(false)
-  const [pendingPayload, setPendingPayload] = useState<any | null>(null)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
   const apiFetch = useApi()
-  const router = useRouter()
-  const { toast } = useToast()
   const { t } = useLanguage()
+  const { toast } = useToast();
 
   useEffect(() => {
-    const fetchNetworks = async () => {
+    const fetchTransactions = async () => {
+      setLoading(true)
+      setError("")
       try {
-        const data = await apiFetch(`${baseUrl}/api/payments/networks/`)
-        setNetworks(data.results || [])
-      } catch (err) {
-        setError(t("transactions.failedToLoadNetworks") || "Échec du chargement des réseaux")
+        const data = await apiFetch(`${baseUrl}/api/transactions/withdraw/`)
+        const transactionsData = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : []
+        setTransactions(transactionsData)
+        toast({
+          title: t("withdraw.loaded") || "Withdraw transactions loaded",
+          description: t("withdraw.loadedSuccessfully") || "Withdraw transaction list loaded successfully",
+        })
+      } catch (err: any) {
+        const errorMessage = extractErrorMessages(err) || t("withdraw.failedToLoad") || "Failed to load withdraw transactions"
+        setError(errorMessage)
+        toast({
+          title: t("withdraw.failedToLoad") || "Failed to load",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
       }
     }
-    fetchNetworks()
-  }, [apiFetch])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (recipientPhone.trim() !== confirmRecipientPhone.trim()) {
-      setError(t("transactions.phoneMismatch") || "Le numéro de téléphone et la confirmation ne correspondent pas")
-      return
-    }
-    if (!confirmDetails) {
-      setError(t("transactions.confirmDetailsRequired") || "Veuillez confirmer le numéro de téléphone et le montant")
-      return
-    }
-    // Prepare payload and open confirmation modal
-    const payload = {
-      type: "withdrawal",
-      amount,
-      recipient_phone: recipientPhone,
-      recipient_name: null,
-      objet: objet.trim() === "" ? null : objet,
-      network,
-    }
-    setPendingPayload(payload)
-    setShowConfirmModal(true)
-  }
+    fetchTransactions()
+  }, [searchTerm, statusFilter, apiFetch, t, toast])
 
-  const handleConfirmSubmit = async () => {
-    if (!pendingPayload) return
+  const filteredTransactions = useMemo(() => {
+    let filtered = transactions
+
+    if (searchTerm) {
+      filtered = filtered.filter(transaction =>
+        transaction.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.transaction_id?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(transaction => 
+        statusFilter === "completed" ? transaction.status === "completed" : transaction.status !== "completed"
+      )
+    }
+
+    return filtered
+  }, [transactions, searchTerm, statusFilter])
+
+  const handleRefresh = async () => {
     setLoading(true)
     setError("")
     try {
-      await apiFetch(`${baseUrl}/api/payments/transactions/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(pendingPayload),
-      })
+      const data = await apiFetch(`${baseUrl}/api/transactions/withdraw/`)
+      const transactionsData = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : []
+      setTransactions(transactionsData)
       toast({
-        title: t("transactions.withdrawalCreatedTitle") || "Retrait créé",
-        description: t("transactions.transactionCreatedDesc") || "Transaction créée avec succès",
+        title: t("withdraw.loaded") || "Withdraw transactions refreshed",
+        description: t("withdraw.loadedSuccessfully") || "Withdraw transaction list refreshed successfully",
       })
-      setShowConfirmModal(false)
-      setPendingPayload(null)
-      router.push("/dashboard/transactions")
     } catch (err: any) {
-      setError(extractErrorMessages(err) || t("transactions.failedToCreateWithdrawal") || "Échec de la création du retrait")
+      const errorMessage = extractErrorMessages(err) || t("withdraw.failedToLoad") || "Failed to load withdraw transactions"
+      setError(errorMessage)
+      toast({
+        title: t("withdraw.failedToLoad") || "Failed to load",
+        description: errorMessage,
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
   }
 
-  const selectedNetwork = networks.find(n => n.uid === network)
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">
+            Withdraw Transactions
+          </h1>
+          <p className="text-muted-foreground">
+            Process and track fund withdrawals
+          </p>
+        </div>
         
-        {/* Page Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.back()}
-                className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Retour
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
+            <CreditCard className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-foreground">
+              {filteredTransactions.length} transactions
+            </span>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search a transaction..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+                variant="minimal"
+              />
+            </div>
+
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Quick Actions */}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm">
+                <Filter className="h-4 w-4 mr-2" />
+                Advanced filters
               </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Withdraw Transactions Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-primary" />
+            Withdraw Transactions
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <span className="text-muted-foreground">Loading withdraw transactions...</span>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="p-6 text-center">
+              <ErrorDisplay error={error} />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="font-semibold">Transaction</TableHead>
+                    <TableHead className="font-semibold">User</TableHead>
+                    <TableHead className="font-semibold">Amount</TableHead>
+                    <TableHead className="font-semibold">Method</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="font-semibold text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTransactions.map((transaction) => (
+                    <TableRow key={transaction.id} className="hover:bg-accent/50">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <CreditCard className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-foreground">
+                              {transaction.transaction_id || "N/A"}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              ID: {transaction.id || "N/A"}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-muted-foreground">
+                          {transaction.user_name || "N/A"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-muted-foreground">
+                          ${transaction.amount?.toFixed(2) || "N/A"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {transaction.method || "N/A"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={transaction.status === "completed" ? "default" : transaction.status === "pending" ? "secondary" : "destructive"}
+                        >
+                          {transaction.status || "N/A"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link href={`/dashboard/transactions/withdraw/${transaction.id}`}>
+                            <Button variant="ghost" size="sm">
+                              View
+                            </Button>
+                          </Link>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Empty State */}
+      {!loading && filteredTransactions.length === 0 && (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <div className="space-y-4">
+              <div className="h-16 w-16 rounded-full bg-accent mx-auto flex items-center justify-center">
+                <CreditCard className="h-8 w-8 text-muted-foreground" />
+              </div>
               <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  {t("transactions.withdrawTitle") || "Withdraw"}
-                </h1>
-                <p className="text-gray-600 dark:text-gray-300 mt-2 text-lg">
-                  Créer une nouvelle transaction de retrait
+                <h3 className="text-lg font-semibold text-foreground">No withdraw transactions found</h3>
+                <p className="text-muted-foreground">
+                  {searchTerm || statusFilter !== "all" 
+                    ? "No withdraw transactions match your search criteria."
+                    : "Start by processing your first withdraw transaction."
+                  }
                 </p>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <div className="bg-white dark:bg-gray-800 rounded-lg px-4 py-2 shadow-sm">
-                <div className="flex items-center space-x-2">
-                  <TrendingDown className="h-5 w-5 text-red-600" />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Nouveau retrait
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Withdrawal Form */}
-        <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
-          <CardHeader className="border-b border-gray-100 dark:border-gray-700">
-            <CardTitle className="flex items-center space-x-2">
-              <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
-                <TrendingDown className="h-5 w-5 text-red-600 dark:text-red-300" />
-              </div>
-              <span>Détails du retrait</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              
-              {/* Network Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t("transactions.selectNetwork") || "Select Network"}
-                </label>
-                <Select value={network} onValueChange={setNetwork}>
-                  <SelectTrigger className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-                    <SelectValue placeholder={t("transactions.selectNetwork") || "Select Network"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {networks.map((n) => (
-                      <SelectItem key={n.uid} value={n.uid}>
-                        <div className="flex items-center space-x-2">
-                          <Network className="h-4 w-4 text-blue-600" />
-                          <span>{n.nom}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Amount */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t("transactions.amount") || "Amount"}
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <DollarSign className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <Input
-                    placeholder={t("transactions.amount") || "Amount"}
-                    value={amount}
-                    onChange={e => setAmount(e.target.value)}
-                    type="number"
-                    required
-                    className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
-                  />
-                </div>
-              </div>
-
-              {/* Recipient Phone */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t("transactions.recipientPhone") || "Recipient Phone"}
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Phone className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <Input
-                    placeholder={t("transactions.recipientPhone") || "Recipient Phone"}
-                    value={recipientPhone}
-                    onChange={e => setRecipientPhone(e.target.value)}
-                    required
-                    className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
-                  />
-                </div>
-              </div>
-
-              {/* Confirm Recipient Phone */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t("transactions.confirmRecipientPhone") || "Confirm Recipient Phone"}
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Phone className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <Input
-                    placeholder={t("transactions.confirmRecipientPhone") || "Confirm Recipient Phone"}
-                    value={confirmRecipientPhone}
-                    onChange={e => setConfirmRecipientPhone(e.target.value)}
-                    required
-                    className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
-                  />
-                </div>
-                {recipientPhone && confirmRecipientPhone && recipientPhone.trim() !== confirmRecipientPhone.trim() && (
-                  <div className="mt-2 flex items-center space-x-2 text-sm text-red-600">
-                    <AlertTriangle className="h-4 w-4" />
-                    <span>Les numéros de téléphone ne correspondent pas</span>
-                  </div>
-                )}
-                {recipientPhone && confirmRecipientPhone && recipientPhone.trim() === confirmRecipientPhone.trim() && (
-                  <div className="mt-2 flex items-center space-x-2 text-sm text-green-600">
-                    <CheckCircle className="h-4 w-4" />
-                    <span>Les numéros de téléphone correspondent</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Purpose/Objet */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t("transactions.purpose") || "Purpose"}
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FileText className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <Input
-                    placeholder={t("transactions.purpose") || "Purpose"}
-                    value={objet}
-                    onChange={e => setObjet(e.target.value)}
-                    className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
-                  />
-                </div>
-              </div>
-
-              {/* Confirmation Checkbox */}
-              <div className="flex items-center space-x-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-700">
-                <input
-                  type="checkbox"
-                  checked={confirmDetails}
-                  onChange={e => setConfirmDetails(e.target.checked)}
-                  className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
-                />
-                <label className="text-sm text-red-800 dark:text-red-200">
-                  {t("transactions.confirmationLabel") || "I confirm the phone number and amount are correct"}
-                </label>
-              </div>
-
-              {/* Error Display */}
-              {error && (
-                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg">
-                  <ErrorDisplay error={error} variant="inline" />
-                </div>
-              )}
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                disabled={
-                  loading ||
-                  !network ||
-                  !confirmDetails ||
-                  recipientPhone.trim() !== confirmRecipientPhone.trim()
-                }
-                className="w-full bg-red-600 hover:bg-red-700 text-white"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {t("common.submitting") || "Soumission..."}
-                  </>
-                ) : (
-                  <>
-                    <TrendingDown className="h-4 w-4 mr-2" />
-                    {t("transactions.reviewAndConfirm") || t("transactions.createWithdrawal") || "Examiner et soumettre"}
-                  </>
-                )}
-              </Button>
-            </form>
           </CardContent>
         </Card>
-
-        {/* Confirmation Modal */}
-        <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
-          <DialogContent className="bg-white dark:bg-gray-800 border-0 shadow-xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center space-x-2">
-                <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
-                  <TrendingDown className="h-5 w-5 text-red-600" />
-                </div>
-                <span>{t("transactions.confirmWithdrawalTitle") || t("transactions.reviewAndConfirm") || "Confirmer le retrait"}</span>
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-1 gap-4">
-                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <Network className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">{t("transactions.selectNetwork") || "Réseau"}:</span>
-                  </div>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{selectedNetwork?.nom || network}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <DollarSign className="h-4 w-4 text-red-600" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">{t("transactions.amount") || "Montant"}:</span>
-                  </div>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{amount}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4 text-indigo-600" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">{t("transactions.recipientPhone") || "Téléphone du destinataire"}:</span>
-                  </div>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{recipientPhone}</span>
-                </div>
-                {objet && (
-                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <FileText className="h-4 w-4 text-purple-600" />
-                      <span className="text-sm text-gray-600 dark:text-gray-400">{t("transactions.purpose") || "Objet"}:</span>
-                    </div>
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{objet}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-            <DialogFooter className="flex gap-3">
-              <Button 
-                variant="outline" 
-                onClick={() => { setShowConfirmModal(false); }} 
-                disabled={loading}
-                className="border-gray-200 dark:border-gray-600"
-              >
-                {t("common.cancel") || "Annuler"}
-              </Button>
-              <Button 
-                onClick={handleConfirmSubmit} 
-                disabled={loading}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {t("common.submitting") || "Soumission..."}
-                  </>
-                ) : (
-                  <>
-                    <TrendingDown className="h-4 w-4 mr-2" />
-                    {t("transactions.submit") || "Soumettre"}
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+      )}
     </div>
   )
 }
