@@ -14,7 +14,7 @@ import {
   ArrowUpDown, 
   ShieldCheck, 
 
-  
+
   Filter,
   RefreshCw
 } from "lucide-react"
@@ -39,7 +39,7 @@ export default function DeviceAuthorizationsPage() {
       setLoading(true)
       setError("")
       try {
-        const data = await apiFetch(`${baseUrl}/api/device-authorizations/`)
+        const data = await apiFetch(`${baseUrl}/api/payments/betting/admin/device-authorizations/`)
         const authorizationsData = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : []
         setAuthorizations(authorizationsData)
         toast({
