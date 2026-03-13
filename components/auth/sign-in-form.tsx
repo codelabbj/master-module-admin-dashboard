@@ -127,7 +127,7 @@ export function SignInForm() {
     setError("")
     setLoading(true)
     try {
-      await apiFetch(`${baseUrl}/api/auth/password-reset/`, {
+      await apiFetch(`${baseUrl}/api/auth/password-reset/initiate/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier }),
