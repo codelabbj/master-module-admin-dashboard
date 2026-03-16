@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { useApi } from "@/lib/useApi";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -13,8 +13,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 
-export default function CommissionStatPage({ params }: { params: { user_id: string } }) {
-  const userId = params.user_id;
+export default function CommissionStatPage({ params }: { params: Promise<{ user_id: string }> }) {
+  const resolvedParams = use(params);
+  const userId = resolvedParams.user_id;
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

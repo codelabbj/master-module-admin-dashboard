@@ -15,19 +15,7 @@ import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-displa
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
-// Colors for consistent theming
-const COLORS = {
-  primary: '#3B82F6',
-  secondary: '#10B981', 
-  accent: '#F59E0B',
-  danger: '#EF4444',
-  warning: '#F97316',
-  success: '#22C55E',
-  info: '#06B6D4',
-  purple: '#8B5CF6',
-  pink: '#EC4899',
-  indigo: '#6366F1'
-};
+// Theme colors are managed via CSS variables and Tailwind classes (primary, accent, etc.)
 
 export default function NetworkConfigListPage() {
   const [configs, setConfigs] = useState<any[]>([])
@@ -137,14 +125,14 @@ export default function NetworkConfigListPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-background">
+      <div className="container-minimal py-8">
         
         {/* Page Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold text-gradient">
                 {t("networkConfig.list") || "Network Configurations"}
               </h1>
               <p className="text-gray-600 dark:text-gray-300 mt-2 text-lg">
@@ -161,7 +149,7 @@ export default function NetworkConfigListPage() {
                 </div>
               </div>
         <Link href="/dashboard/network-config/create">
-                <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
+                <Button className="hover-lift">
                   <Plus className="h-4 w-4 mr-2" />
                   Ajouter une configuration
                 </Button>
@@ -233,8 +221,8 @@ export default function NetworkConfigListPage() {
         <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
           <CardHeader className="border-b border-gray-100 dark:border-gray-700">
             <CardTitle className="flex items-center space-x-2">
-              <div className="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
-                <Settings className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Settings className="h-5 w-5 text-primary" />
               </div>
               <span>Configurations de réseau</span>
             </CardTitle>
@@ -243,7 +231,7 @@ export default function NetworkConfigListPage() {
         {loading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="flex flex-col items-center space-y-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                   <span className="text-gray-600 dark:text-gray-300">Chargement des configurations...</span>
                 </div>
               </div>
@@ -269,7 +257,7 @@ export default function NetworkConfigListPage() {
                       <TableRow key={config.id || config.uid} className="hover:bg-gray-50 dark:hover:bg-gray-900/50">
                   <TableCell>
                           <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-semibold">
                               <Settings className="h-5 w-5" />
                             </div>
                             <div>
@@ -365,7 +353,7 @@ export default function NetworkConfigListPage() {
                 {searchTerm ? `Aucune configuration ne correspond à "${searchTerm}"` : "Aucune configuration de réseau n'a encore été ajoutée."}
               </p>
               <Link href="/dashboard/network-config/create">
-                <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
+                <Button className="hover-lift">
                   <Plus className="h-4 w-4 mr-2" />
                   Ajouter la première configuration
                 </Button>

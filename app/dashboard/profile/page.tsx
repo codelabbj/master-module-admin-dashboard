@@ -25,7 +25,9 @@ import {
   CheckCircle,
   XCircle,
   Settings,
-  Clock
+  Clock,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 interface UserProfile {
@@ -57,6 +59,8 @@ export default function ProfilePage() {
   const [newPassword, setNewPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const apiFetch = useApi();
   const { toast } = useToast();
 
@@ -517,29 +521,55 @@ export default function ProfilePage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="old_password">Ancien mot de passe</Label>
-                      <Input
-                        id="old_password"
-                        type="password"
-                        value={oldPassword}
-                        onChange={(e) => setOldPassword(e.target.value)}
-                        placeholder="Mot de passe actuel"
-                        required
-                        className="minimal-input"
-                        variant="minimal"
-                      />
+                      <div className="relative">
+                        <Input
+                          id="old_password"
+                          type={showOldPassword ? "text" : "password"}
+                          value={oldPassword}
+                          onChange={(e) => setOldPassword(e.target.value)}
+                          placeholder="Mot de passe actuel"
+                          required
+                          className="minimal-input pr-10"
+                          variant="minimal"
+                        />
+                        <button
+                          type="button"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+                          onClick={() => setShowOldPassword(!showOldPassword)}
+                        >
+                          {showOldPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="new_password">Nouveau mot de passe</Label>
-                      <Input
-                        id="new_password"
-                        type="password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Nouveau mot de passe"
-                        required
-                        className="minimal-input"
-                        variant="minimal"
-                      />
+                      <div className="relative">
+                        <Input
+                          id="new_password"
+                          type={showNewPassword ? "text" : "password"}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="Nouveau mot de passe"
+                          required
+                          className="minimal-input pr-10"
+                          variant="minimal"
+                        />
+                        <button
+                          type="button"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                        >
+                          {showNewPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                   <div className="flex justify-end gap-2">

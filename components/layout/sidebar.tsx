@@ -55,7 +55,7 @@ export function Sidebar({ open: sidebarOpen, setOpen: setSidebarOpen }: SidebarP
     name: item.label,
     href: item.href,
     icon: item.icon,
-    current: pathname === item.href || pathname.startsWith(item.href + "/"),
+    current: item.href === "/dashboard" ? pathname === "/dashboard" : (pathname === item.href || pathname.startsWith(item.href + "/")),
     children: item.children?.filter(child => {
       if (child.feature === null) return true
       return CONFIG.FEATURES[child.feature]

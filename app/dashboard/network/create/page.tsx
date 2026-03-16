@@ -1,30 +1,234 @@
 "use client"
-
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useToast } from "@/hooks/use-toast"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { useApi } from "@/lib/useApi"
 import { useLanguage } from "@/components/providers/language-provider"
+import { useToast } from "@/hooks/use-toast"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
+import { ArrowLeft, Save, Loader2, Globe, Settings } from "lucide-react"
 
-export default function NetworkCreateRedirectPage() {
+const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+
+export default function NetworkCreatePage() {
   const router = useRouter()
-  const { toast } = useToast()
+  const [nom, setNom] = useState("")
+  const [code, setCode] = useState("")
+  const [country, setCountry] = useState("")
+  const [ussdBaseCode, setUssdBaseCode] = useState("")
+  const [isActive, setIsActive] = useState(true)
+  const [sentDepositToModule, setSentDepositToModule] = useState(false)
+  const [sentWithdrawalToModule, setSentWithdrawalToModule] = useState(false)
+  const [countries, setCountries] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const apiFetch = useApi()
   const { t } = useLanguage()
+  const { toast } = useToast();
 
   useEffect(() => {
-    toast({
-      title: t("feature.disabled") || "Feature Disabled",
-      description: t("network.disabled") || "The network feature has been disabled",
-      variant: "destructive",
-    })
-    router.push("/dashboard")
-  }, [router, toast, t])
+    const fetchCountries = async () => {
+      try {
+        const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/countries/`)
+        setCountries(Array.isArray(data) ? data : data.results || [])
+      } catch (err: any) {
+        console.error('Failed to load countries:', err)
+      }
+    }
+    
+    fetchCountries()
+  }, [])
+
+  const handleSubmit = async (e: any) => {
+    e.preventDefault()
+    setLoading(true)
+    setError("")
+    try {
+      await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/networks/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          nom, 
+          code, 
+          country, 
+          ussd_base_code: ussdBaseCode, 
+          is_active: isActive,
+          sent_deposit_to_module: sentDepositToModule,
+          sent_withdrawal_to_module: sentWithdrawalToModule
+        })
+      })
+      toast({
+        title: t("network.created") || "Réseau créé",
+        description: t("network.createdSuccessfully") || "Le réseau a été créé avec succès",
+      })
+      router.push("/dashboard/network/list")
+    } catch (err: any) {
+      const errorMessage = extractErrorMessages(err) || t("network.failedToCreate") || "Échec de la création du réseau"
+      setError(errorMessage)
+      toast({
+        title: t("network.failedToCreate") || "Échec de la création",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <div className="flex items-center justify-center py-12">
-      <div className="flex flex-col items-center space-y-4">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <span className="text-muted-foreground">Redirecting...</span>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">
+            Créer un réseau
+          </h1>
+          <p className="text-muted-foreground">
+            Ajouter un nouveau réseau mobile au système
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour
+          </Button>
+        </div>
       </div>
+
+      {error && (
+        <ErrorDisplay error={error} />
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Basic Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5 text-primary" />
+              Informations de base
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="nom">Nom du réseau</Label>
+                <Input
+                  id="nom"
+                  value={nom}
+                  onChange={(e) => setNom(e.target.value)}
+                  placeholder="ex: MTN, Orange, Airtel"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="code">Code du réseau</Label>
+                <Input
+                  id="code"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="ex: MTN, ORG, AIR"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="country">Pays</Label>
+                <Select value={country} onValueChange={setCountry}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner le pays" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countries.map((c) => (
+                      <SelectItem key={c.id || c.uid} value={c.id || c.uid}>
+                        {c.nom}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="ussdBaseCode">Code de base USSD</Label>
+                <Input
+                  id="ussdBaseCode"
+                  value={ussdBaseCode}
+                  onChange={(e) => setUssdBaseCode(e.target.value)}
+                  placeholder="ex: *123#"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5 text-primary" />
+              Paramètres
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="isActive"
+                  checked={isActive}
+                  onCheckedChange={setIsActive}
+                />
+                <Label htmlFor="isActive">Actif</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="sentDepositToModule"
+                  checked={sentDepositToModule}
+                  onCheckedChange={setSentDepositToModule}
+                />
+                <Label htmlFor="sentDepositToModule">Envoyer le dépôt au module</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="sentWithdrawalToModule"
+                  checked={sentWithdrawalToModule}
+                  onCheckedChange={setSentWithdrawalToModule}
+                />
+                <Label htmlFor="sentWithdrawalToModule">Envoyer le retrait au module</Label>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Submit Button */}
+        <div className="flex justify-end space-x-4">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => router.back()}
+          >
+            Annuler
+          </Button>
+          <Button 
+            type="submit" 
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Création...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Créer le réseau
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
     </div>
   )
 }

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { useApi } from "@/lib/useApi";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -22,8 +22,9 @@ const COLORS = {
   indigo: '#6366F1'
 };
 
-export default function PartnerDetailsPage({ params }: { params: { user_id: string } }) {
-  const userId = params.user_id;
+export default function PartnerDetailsPage({ params }: { params: Promise<{ user_id: string }> }) {
+  const resolvedParams = use(params);
+  const userId = resolvedParams.user_id;
   const [partner, setPartner] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

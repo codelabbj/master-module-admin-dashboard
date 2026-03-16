@@ -15,19 +15,7 @@ import { ArrowLeft, Save, Loader2, Globe, Settings } from "lucide-react"
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
-// Colors for consistent theming - using logo colors
-const COLORS = {
-  primary: '#FF6B35', // Orange (primary from logo)
-  secondary: '#00FF88', // Bright green from logo
-  accent: '#1E3A8A', // Dark blue from logo
-  danger: '#EF4444',
-  warning: '#F97316',
-  success: '#00FF88', // Using bright green for success
-  info: '#1E3A8A', // Using dark blue for info
-  purple: '#8B5CF6',
-  pink: '#EC4899',
-  indigo: '#6366F1'
-};
+// Theme colors are managed via CSS variables and Tailwind classes
 
 export default function NetworkEditPage() {
   const router = useRouter()

@@ -46,7 +46,8 @@ export default function PlatformsListPage() {
       setError("")
       try {
         const data = await apiFetch(`${baseUrl}/api/platforms/`)
-        setPlatforms(data.results || data || [])
+        const platformData = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : []
+        setPlatforms(platformData)
         toast({
           title: t("platforms.loaded") || "Platforms loaded",
           description: t("platforms.loadedSuccessfully") || "Platform list loaded successfully",
@@ -68,7 +69,7 @@ export default function PlatformsListPage() {
   }, [searchTerm, statusFilter, currentPage, sortField, sortDirection])
 
   const filteredPlatforms = useMemo(() => {
-    let filtered = platforms
+    let filtered = Array.isArray(platforms) ? platforms : []
 
     if (searchTerm) {
       filtered = filtered.filter(platform =>
@@ -100,7 +101,8 @@ export default function PlatformsListPage() {
     setError("")
     try {
       const data = await apiFetch(`${baseUrl}/api/platforms/`)
-      setPlatforms(data.results || data || [])
+      const platformData = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : []
+      setPlatforms(platformData)
       toast({
         title: t("platforms.loaded") || "Platforms refreshed",
         description: t("platforms.loadedSuccessfully") || "Platform list refreshed successfully",

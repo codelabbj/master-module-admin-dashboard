@@ -16,19 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
-// Colors for consistent theming
-const COLORS = {
-  primary: '#3B82F6',
-  secondary: '#10B981', 
-  accent: '#F59E0B',
-  danger: '#EF4444',
-  warning: '#F97316',
-  success: '#22C55E',
-  info: '#06B6D4',
-  purple: '#8B5CF6',
-  pink: '#EC4899',
-  indigo: '#6366F1'
-};
+// Theme colors are managed via CSS variables and Tailwind classes (primary, accent, etc.)
 
 export default function NetworkConfigCreatePage() {
   const router = useRouter()
@@ -139,8 +127,8 @@ export default function NetworkConfigCreatePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-background">
+      <div className="container-minimal py-8">
         
         {/* Page Header */}
         <div className="mb-8">
@@ -155,7 +143,7 @@ export default function NetworkConfigCreatePage() {
                 Retour
               </Button>
               <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <h1 className="text-4xl font-bold text-gradient">
                   {t("networkConfig.create") || "Create Network Configuration"}
                 </h1>
                 <p className="text-gray-600 dark:text-gray-300 mt-2 text-lg">
@@ -179,8 +167,8 @@ export default function NetworkConfigCreatePage() {
           <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
             <CardHeader className="border-b border-gray-100 dark:border-gray-700">
               <CardTitle className="flex items-center space-x-2">
-                <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                  <Settings className="h-5 w-5 text-blue-600 dark:text-blue-300" />
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Settings className="h-5 w-5 text-primary" />
                 </div>
                 <span>Paramètres de base</span>
               </CardTitle>
@@ -393,7 +381,7 @@ export default function NetworkConfigCreatePage() {
             <Button 
               type="submit" 
               disabled={loading}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+              className="hover-lift"
             >
               {loading ? (
                 <>

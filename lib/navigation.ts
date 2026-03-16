@@ -13,6 +13,8 @@ import {
   Shield,
   Receipt,
   ArrowRightLeft,
+  Smartphone,
+  Waves,
   type LucideIcon,
 } from "lucide-react"
 
@@ -40,7 +42,6 @@ export const navItems: NavItem[] = [
       { href: "/dashboard/users/list", label: "User List", icon: Users, feature: "USERS" },
     ],
   },
-  { href: "/dashboard/transactions", label: "Transactions", icon: CreditCard, feature: "TRANSACTIONS" },
   {
     href: "/dashboard/country",
     label: "Country",
@@ -49,6 +50,16 @@ export const navItems: NavItem[] = [
     children: [
       { href: "/dashboard/country/list", label: "Country List", icon: Globe, feature: "COUNTRY" },
       { href: "/dashboard/country/create", label: "Create Country", icon: Globe, feature: "COUNTRY" },
+    ],
+  },
+  {
+    href: "/dashboard/network",
+    label: "Networks",
+    icon: Smartphone,
+    feature: "NETWORK",
+    children: [
+      { href: "/dashboard/network/list", label: "Network List", icon: Smartphone, feature: "NETWORK" },
+      { href: "/dashboard/network/create", label: "Create Network", icon: Smartphone, feature: "NETWORK" },
     ],
   },
   {

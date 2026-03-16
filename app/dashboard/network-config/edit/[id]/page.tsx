@@ -15,19 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
-// Colors for consistent theming
-const COLORS = {
-  primary: '#3B82F6',
-  secondary: '#10B981', 
-  accent: '#F59E0B',
-  danger: '#EF4444',
-  warning: '#F97316',
-  success: '#22C55E',
-  info: '#06B6D4',
-  purple: '#8B5CF6',
-  pink: '#EC4899',
-  indigo: '#6366F1'
-};
+// Theme colors are managed via CSS variables and Tailwind classes (primary, accent, etc.)
 
 export default function NetworkConfigEditPage() {
   const router = useRouter()
@@ -197,12 +185,12 @@ export default function NetworkConfigEditPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="min-h-screen bg-background">
+        <div className="container-minimal py-8">
           <div className="flex items-center justify-center py-12">
             <div className="flex flex-col items-center space-y-4">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-              <span className="text-gray-600 dark:text-gray-300">Chargement de la configuration...</span>
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="text-muted-foreground">Chargement de la configuration...</span>
             </div>
           </div>
         </div>
@@ -211,8 +199,8 @@ export default function NetworkConfigEditPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-background">
+      <div className="container-minimal py-8">
         
         {/* Page Header */}
         <div className="mb-8">
@@ -227,7 +215,7 @@ export default function NetworkConfigEditPage() {
                 Retour
               </Button>
               <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <h1 className="text-4xl font-bold text-gradient">
                   Modifier la configuration du réseau
                 </h1>
                 <p className="text-gray-600 dark:text-gray-300 mt-2 text-lg">
@@ -251,8 +239,8 @@ export default function NetworkConfigEditPage() {
           <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
             <CardHeader className="border-b border-gray-100 dark:border-gray-700">
               <CardTitle className="flex items-center space-x-2">
-                <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                  <Settings className="h-5 w-5 text-blue-600 dark:text-blue-300" />
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Settings className="h-5 w-5 text-primary" />
                 </div>
                 <span>Paramètres de base</span>
               </CardTitle>
@@ -290,8 +278,8 @@ export default function NetworkConfigEditPage() {
           <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
             <CardHeader className="border-b border-gray-100 dark:border-gray-700">
               <CardTitle className="flex items-center space-x-2">
-                <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                  <Globe className="h-5 w-5 text-green-600 dark:text-green-300" />
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Globe className="h-5 w-5 text-primary" />
                 </div>
                 <span>Commandes USSD</span>
               </CardTitle>
@@ -336,8 +324,8 @@ export default function NetworkConfigEditPage() {
           <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
             <CardHeader className="border-b border-gray-100 dark:border-gray-700">
               <CardTitle className="flex items-center space-x-2">
-                <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                  <MessageSquare className="h-5 w-5 text-purple-600 dark:text-purple-300" />
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <MessageSquare className="h-5 w-5 text-primary" />
                 </div>
                 <span>Mots-clés SMS</span>
               </CardTitle>
@@ -382,8 +370,8 @@ export default function NetworkConfigEditPage() {
           <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
             <CardHeader className="border-b border-gray-100 dark:border-gray-700">
               <CardTitle className="flex items-center space-x-2">
-                <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
-                  <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-300" />
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <AlertTriangle className="h-5 w-5 text-primary" />
                 </div>
                 <span>Mots-clés d'erreur</span>
               </CardTitle>
@@ -406,8 +394,8 @@ export default function NetworkConfigEditPage() {
           <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
             <CardHeader className="border-b border-gray-100 dark:border-gray-700">
               <CardTitle className="flex items-center space-x-2">
-                <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                  <Clock className="h-5 w-5 text-orange-600 dark:text-orange-300" />
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Clock className="h-5 w-5 text-primary" />
                 </div>
                 <span>Paramètres personnalisés</span>
               </CardTitle>
@@ -462,7 +450,7 @@ export default function NetworkConfigEditPage() {
             <Button 
               type="submit" 
               disabled={saving}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+              className="hover-lift"
             >
               {saving ? (
                 <>
@@ -482,4 +470,4 @@ export default function NetworkConfigEditPage() {
       </div>
     </div>
   )
-} 
+}
