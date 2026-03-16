@@ -52,7 +52,7 @@ export function Sidebar({ open: sidebarOpen, setOpen: setSidebarOpen }: SidebarP
     if (item.feature === null) return true
     return CONFIG.FEATURES[item.feature]
   }).map(item => ({
-    name: item.label,
+    name: t(item.label),
     href: item.href,
     icon: item.icon,
     current: pathname === item.href || pathname.startsWith(item.href + "/"),
@@ -60,7 +60,7 @@ export function Sidebar({ open: sidebarOpen, setOpen: setSidebarOpen }: SidebarP
       if (child.feature === null) return true
       return CONFIG.FEATURES[child.feature]
     }).map(child => ({
-      name: child.label,
+      name: t(child.label),
       href: child.href,
     })),
   }))
