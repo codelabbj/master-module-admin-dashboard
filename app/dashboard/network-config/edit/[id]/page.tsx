@@ -54,7 +54,7 @@ export default function NetworkConfigEditPage() {
   useEffect(() => {
     const fetchNetworks = async () => {
       try {
-        const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/networks/`)
+        const data = await apiFetch(`${baseUrl}/api/payments/networks/`)
         setNetworks(Array.isArray(data) ? data : data.results || [])
         toast({
           title: "Réseaux chargés",
@@ -82,7 +82,7 @@ export default function NetworkConfigEditPage() {
       setLoading(true)
       setError("")
       try {
-        const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/network-configs/${id}/`)
+        const data = await apiFetch(`${baseUrl}/api/payments/network-configs/${id}/`)
         
         setNetwork(data.network || "")
         setIsActive(data.is_active)
@@ -159,7 +159,7 @@ export default function NetworkConfigEditPage() {
         }
       }
       
-      await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/network-configs/${id}/`, {
+      await apiFetch(`${baseUrl}/api/payments/network-configs/${id}/`, {
         method: 'PUT',
         body: JSON.stringify(configData)
       })

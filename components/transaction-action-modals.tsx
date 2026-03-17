@@ -54,8 +54,8 @@ export function TransactionActionModals({
 
         try {
             const endpoint = isSuccess
-                ? `${baseUrl.replace(/\/$/, "")}/api/payments/transactions/${transaction.uid}/success/`
-                : `${baseUrl.replace(/\/$/, "")}/api/payments/transactions/${transaction.uid}/mark-failed/`
+                ? `${baseUrl}/api/payments/transactions/${transaction.uid}/success/`
+                : `${baseUrl}/api/payments/transactions/${transaction.uid}/mark-failed/`
 
             await apiFetch(endpoint, {
                 method: "POST",
@@ -113,3 +113,4 @@ export function TransactionActionModals({
         </Dialog>
     )
 }
+

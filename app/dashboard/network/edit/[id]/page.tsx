@@ -39,7 +39,7 @@ export default function NetworkEditPage() {
   useEffect(() => {
     const fetchCountries = async () => {
       try {
-        const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/countries/`)
+        const data = await apiFetch(`${baseUrl}/api/payments/countries/`)
         setCountries(Array.isArray(data) ? data : data.results || [])
         toast({
           title: t("network.countriesLoaded"),
@@ -66,7 +66,7 @@ export default function NetworkEditPage() {
       setLoading(true)
       setError("")
       try {
-        const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/networks/${id}/`)
+        const data = await apiFetch(`${baseUrl}/api/payments/networks/${id}/`)
         setNom(data.nom || "")
         setCode(data.code || "")
         setCountry(data.country || "")
@@ -99,7 +99,7 @@ export default function NetworkEditPage() {
     setSaving(true)
     setError("")
     try {
-      await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/networks/${id}/`, {
+      await apiFetch(`${baseUrl}/api/payments/networks/${id}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 

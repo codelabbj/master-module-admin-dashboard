@@ -85,6 +85,8 @@ export default function TransactionsPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [startDate, setStartDate] = useState("")
+  const [endDate, setEndDate] = useState("")
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [sortField, setSortField] = useState<"amount" | "created_at" | "status" | null>(null)
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
@@ -209,6 +211,16 @@ export default function TransactionsPage() {
       if (typeFilter !== "all") {
         params.append("trans_type", typeFilter)
       }
+      if (startDate) {
+        params.append("created_at__gte", startDate)
+      }
+      if (endDate) {
+        // Add one day to end date to include the entire end date
+        const endDateObj = new Date(endDate)
+        endDateObj.setDate(endDateObj.getDate() + 1)
+        params.append("created_at__lt", endDateObj.toISOString().split('T')[0])
+      }
+
       if (sortField) {
         const orderBy = sortField === "created_at" ? "created_at" : sortField
         const prefix = sortDirection === "desc" ? "-" : "+"
@@ -739,10 +751,42 @@ export default function TransactionsPage() {
             </Select>
 
             {/* Quick Actions */}
+            <div className="flex flex-col md:flex-row items-center gap-4 col-span-1 md:col-span-1">
+              <div className="flex flex-col gap-1 w-full">
+                <label className="text-xs font-medium text-muted-foreground ml-1">Date début</label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full"
+                  variant="minimal"
+                />
+              </div>
+              <div className="flex flex-col gap-1 w-full">
+                <label className="text-xs font-medium text-muted-foreground ml-1">Date fin</label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full"
+                  variant="minimal"
+                />
+              </div>
+            </div>
+
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                Filtres avancés
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  setStartDate("")
+                  setEndDate("")
+                  setStatusFilter("all")
+                  setTypeFilter("all")
+                  setSearchTerm("")
+                }}
+              >
+                Réinitialiser
               </Button>
             </div>
           </div>

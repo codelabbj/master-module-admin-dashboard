@@ -35,7 +35,7 @@ export default function CommissionConfigCreatePage() {
     setLoading(true)
     setError("")
     try {
-      await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/commission-configs/`, {
+      await apiFetch(`${baseUrl}/api/commission-configs/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -300,3 +300,4 @@ export default function CommissionConfigCreatePage() {
     </div>
   )
 }
+

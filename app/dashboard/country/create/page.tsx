@@ -32,7 +32,7 @@ export default function CountryCreatePage() {
     setLoading(true)
     setError("")
     try {
-      await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/countries/`, {
+      await apiFetch(`${baseUrl}/api/payments/countries/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nom, code, is_active: isActive })

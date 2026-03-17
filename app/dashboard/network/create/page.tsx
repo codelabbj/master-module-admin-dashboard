@@ -34,7 +34,7 @@ export default function NetworkCreatePage() {
   useEffect(() => {
     const fetchCountries = async () => {
       try {
-        const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/countries/`)
+        const data = await apiFetch(`${baseUrl}/api/payments/countries/`)
         setCountries(Array.isArray(data) ? data : data.results || [])
       } catch (err: any) {
         console.error('Failed to load countries:', err)
@@ -49,7 +49,7 @@ export default function NetworkCreatePage() {
     setLoading(true)
     setError("")
     try {
-      await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/networks/`, {
+      await apiFetch(`${baseUrl}/api/payments/networks/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -232,3 +232,4 @@ export default function NetworkCreatePage() {
     </div>
   )
 }
+

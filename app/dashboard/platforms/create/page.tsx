@@ -33,7 +33,7 @@ export default function PlatformCreatePage() {
     setLoading(true)
     setError("")
     try {
-      await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/platforms/`, {
+      await apiFetch(`${baseUrl}/api/platforms/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, code, description, is_active: isActive })
@@ -247,3 +247,4 @@ export default function PlatformCreatePage() {
     </div>
   )
 }
+

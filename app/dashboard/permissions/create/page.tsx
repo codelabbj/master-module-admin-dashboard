@@ -30,7 +30,7 @@ export default function PermissionCreatePage() {
     setLoading(true)
     setError("")
     try {
-      await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/permissions/`, {
+      await apiFetch(`${baseUrl}/api/permissions/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, description })
@@ -205,3 +205,4 @@ export default function PermissionCreatePage() {
     </div>
   )
 }
+

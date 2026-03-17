@@ -9,17 +9,18 @@ import { useApi } from "@/lib/useApi"
 import { useLanguage } from "@/components/providers/language-provider"
 import { useToast } from "@/hooks/use-toast"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
-import { ArrowLeft, Save, Loader2, Settings, CheckCircle, Plus } from "lucide-react"
+import { ArrowLeft, Save, Loader2, DollarSign, CheckCircle, Plus } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
-export default function ApiConfigEditPage() {
+export default function CommissionConfigEditPage() {
   const [name, setName] = useState("")
-  const [configBaseUrl, setConfigBaseUrl] = useState("")
-  const [apiKey, setApiKey] = useState("")
+  const [rate, setRate] = useState("")
+  const [minAmount, setMinAmount] = useState("")
+  const [maxAmount, setMaxAmount] = useState("")
   const [description, setDescription] = useState("")
   const [isActive, setIsActive] = useState(true)
   const [loading, setLoading] = useState(false)
@@ -31,24 +32,25 @@ export default function ApiConfigEditPage() {
   const { t } = useLanguage()
   const { toast } = useToast();
 
-  const configId = params.id as string
+  const configId = params.partner_uid as string
 
   useEffect(() => {
     const fetchConfig = async () => {
       setLoading(true)
       setError("")
       try {
-        const data = await apiFetch(`${baseUrl}/api/api-configs/${configId}/`)
+        const data = await apiFetch(`${baseUrl}/api/commission-configs/${configId}/`)
         setName(data.name || "")
-        setConfigBaseUrl(data.base_url || "")
-        setApiKey(data.api_key || "")
+        setRate(data.rate ? data.rate.toString() : "")
+        setMinAmount(data.min_amount ? data.min_amount.toString() : "")
+        setMaxAmount(data.max_amount ? data.max_amount.toString() : "")
         setDescription(data.description || "")
         setIsActive(data.is_active ?? true)
       } catch (err: any) {
-        const errorMessage = extractErrorMessages(err) || t("apiConfig.failedToLoad")
+        const errorMessage = extractErrorMessages(err) || t("commissionConfig.failedToLoad")
         setError(errorMessage)
         toast({
-          title: t("apiConfig.failedToLoad"),
+          title: t("commissionConfig.failedToLoad"),
           description: errorMessage,
           variant: "destructive",
         })
@@ -67,21 +69,28 @@ export default function ApiConfigEditPage() {
     setSaving(true)
     setError("")
     try {
-      await apiFetch(`${baseUrl}/api/api-configs/${configId}/`, {
+      await apiFetch(`${baseUrl}/api/commission-configs/${configId}/`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, base_url: configBaseUrl, api_key: apiKey, description, is_active: isActive })
+        body: JSON.stringify({ 
+          name, 
+          rate: parseFloat(rate) || 0, 
+          min_amount: parseFloat(minAmount) || 0, 
+          max_amount: parseFloat(maxAmount) || 0,
+          description,
+          is_active: isActive 
+        })
       })
       toast({
-        title: t("apiConfig.updated"),
-        description: t("apiConfig.updatedSuccessfully"),
+        title: t("commissionConfig.updated"),
+        description: t("commissionConfig.updatedSuccessfully"),
       })
-      router.push("/dashboard/api-config/list")
+      router.push("/dashboard/commission-config/list")
     } catch (err: any) {
-      const errorMessage = extractErrorMessages(err) || t("apiConfig.failedToUpdate")
+      const errorMessage = extractErrorMessages(err) || t("commissionConfig.failedToUpdate")
       setError(errorMessage)
       toast({
-        title: t("apiConfig.failedToUpdate"),
+        title: t("commissionConfig.failedToUpdate"),
         description: errorMessage,
         variant: "destructive",
       })
@@ -95,7 +104,7 @@ export default function ApiConfigEditPage() {
       <div className="flex items-center justify-center py-12">
         <div className="flex flex-col items-center space-y-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <span className="text-muted-foreground">Loading API config...</span>
+          <span className="text-muted-foreground">Loading commission config...</span>
         </div>
       </div>
     )
@@ -116,18 +125,18 @@ export default function ApiConfigEditPage() {
           </Button>
           <div>
             <h1 className="text-4xl font-bold text-gradient">
-              Edit API Config
+              Edit Commission Config
             </h1>
             <p className="text-muted-foreground mt-2 text-lg">
-              Update API configuration
+              Update commission configuration
             </p>
           </div>
         </div>
         
         <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
-          <Settings className="h-4 w-4 text-primary" />
+          <DollarSign className="h-4 w-4 text-primary" />
           <span className="text-sm font-medium text-foreground">
-            {name || "API Config"}
+            {name || "Commission Config"}
           </span>
         </div>
       </div>
@@ -141,69 +150,97 @@ export default function ApiConfigEditPage() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        {/* API Config Information */}
+        {/* Commission Config Information */}
         <Card className="minimal-card hover-lift">
           <CardHeader className="border-b border-border/50">
             <CardTitle className="flex items-center gap-3 text-xl font-semibold">
               <div className="p-2 bg-primary/10 rounded-lg">
-                <Settings className="h-5 w-5 text-primary" />
+                <DollarSign className="h-5 w-5 text-primary" />
               </div>
-              <span>API Config Information</span>
+              <span>Commission Config Information</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="text-sm font-medium text-foreground">
-                Config Name *
-              </Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="ex: Payment Gateway, SMS Service"
-                className="minimal-input"
-                variant="minimal"
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                The display name of the API configuration
-              </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-sm font-medium text-foreground">
+                  Config Name *
+                </Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="ex: Standard Commission, Premium Commission"
+                  className="minimal-input"
+                  variant="minimal"
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  The display name of the commission configuration
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rate" className="text-sm font-medium text-foreground">
+                  Commission Rate (%) *
+                </Label>
+                <Input
+                  id="rate"
+                  type="number"
+                  value={rate}
+                  onChange={(e) => setRate(e.target.value)}
+                  placeholder="ex: 5.5"
+                  className="minimal-input"
+                  variant="minimal"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Commission rate as a percentage (0-100)
+                </p>
+              </div>
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="baseUrl" className="text-sm font-medium text-foreground">
-                Base URL *
-              </Label>
-              <Input
-                id="baseUrl"
-                value={configBaseUrl}
-                onChange={(e) => setConfigBaseUrl(e.target.value)}
-                placeholder="https://api.example.com"
-                className="minimal-input"
-                variant="minimal"
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                The base URL for the API endpoint
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="apiKey" className="text-sm font-medium text-foreground">
-                API Key
-              </Label>
-              <Input
-                id="apiKey"
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Enter API key..."
-                className="minimal-input font-mono"
-                variant="minimal"
-              />
-              <p className="text-xs text-muted-foreground">
-                API key for authentication (optional)
-              </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="minAmount" className="text-sm font-medium text-foreground">
+                  Minimum Amount ($)
+                </Label>
+                <Input
+                  id="minAmount"
+                  type="number"
+                  value={minAmount}
+                  onChange={(e) => setMinAmount(e.target.value)}
+                  placeholder="ex: 100"
+                  className="minimal-input"
+                  variant="minimal"
+                  min="0"
+                  step="0.01"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Minimum transaction amount for this config
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="maxAmount" className="text-sm font-medium text-foreground">
+                  Maximum Amount ($)
+                </Label>
+                <Input
+                  id="maxAmount"
+                  type="number"
+                  value={maxAmount}
+                  onChange={(e) => setMaxAmount(e.target.value)}
+                  placeholder="ex: 10000"
+                  className="minimal-input"
+                  variant="minimal"
+                  min="0"
+                  step="0.01"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Maximum transaction amount for this config
+                </p>
+              </div>
             </div>
             
             <div className="space-y-2">
@@ -214,12 +251,12 @@ export default function ApiConfigEditPage() {
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="API config description..."
+                placeholder="Commission config description..."
                 className="minimal-input"
                 variant="minimal"
               />
               <p className="text-xs text-muted-foreground">
-                Optional description of the API config
+                Optional description of the commission config
               </p>
             </div>
             
@@ -242,7 +279,7 @@ export default function ApiConfigEditPage() {
         </Card>
 
         {/* Preview Card */}
-        {(name || configBaseUrl) && (
+        {(name || rate) && (
           <Card className="minimal-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -253,18 +290,18 @@ export default function ApiConfigEditPage() {
             <CardContent className="p-6">
               <div className="flex items-center gap-4 p-4 bg-accent/20 rounded-lg">
                 <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Settings className="h-6 w-6 text-primary" />
+                  <DollarSign className="h-6 w-6 text-primary" />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-foreground">
-                    {name || "API Config"}
+                    {name || "Commission Config"}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    URL: {configBaseUrl || "https://api.example.com"}
+                    Rate: {rate ? `${rate}%` : "0%"}
                   </p>
-                  {apiKey && (
+                  {(minAmount || maxAmount) && (
                     <p className="text-sm text-muted-foreground mt-1">
-                      API Key: {apiKey}
+                      Range: ${minAmount || 0} - ${maxAmount || 0}
                     </p>
                   )}
                 </div>
@@ -288,7 +325,7 @@ export default function ApiConfigEditPage() {
           </Button>
           <Button 
             type="submit" 
-            disabled={saving || !name || !configBaseUrl}
+            disabled={saving || !name || !rate}
             className="min-w-[140px] hover-lift"
           >
             {saving ? (

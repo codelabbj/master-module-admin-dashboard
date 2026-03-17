@@ -86,7 +86,7 @@ export default function EarningManagementPage() {
         params.append("ordering", `${sortDirection === "asc" ? "+" : "-"}${sortField}`)
       }
 
-      const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/admin/commission-payments/?${params.toString()}`
+      const endpoint = `${baseUrl}/api/payments/admin/commission-payments/?${params.toString()}`
       const data = await apiFetch(endpoint)
 
       if (data.results) {
@@ -155,7 +155,7 @@ export default function EarningManagementPage() {
     setDetailError("")
     setDetailEarning(null)
     try {
-      const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/admin/commission-payments/${id}/`
+      const endpoint = `${baseUrl}/api/payments/admin/commission-payments/${id}/`
       const data = await apiFetch(endpoint)
       setDetailEarning(data)
       toast({

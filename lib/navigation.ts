@@ -15,6 +15,7 @@ import {
   ArrowRightLeft,
   Smartphone,
   Waves,
+  Share2,
   type LucideIcon,
 } from "lucide-react"
 
@@ -54,12 +55,12 @@ export const navItems: NavItem[] = [
   },
   {
     href: "/dashboard/network",
-    label: "Networks",
+    label: "nav.networks",
     icon: Smartphone,
     feature: "NETWORK",
     children: [
-      { href: "/dashboard/network/list", label: "Network List", icon: Smartphone, feature: "NETWORK" },
-      { href: "/dashboard/network/create", label: "Create Network", icon: Smartphone, feature: "NETWORK" },
+      { href: "/dashboard/network/list", label: "nav.networkList", icon: Smartphone, feature: "NETWORK" },
+      { href: "/dashboard/network/create", label: "nav.networkCreate", icon: Smartphone, feature: "NETWORK" },
     ],
   },
   {
@@ -79,7 +80,7 @@ export const navItems: NavItem[] = [
     feature: "PLATFORMS",
     children: [
       { href: "/dashboard/platforms/list", label: "nav.platformsList", icon: Gamepad2, feature: "PLATFORMS" },
-      { href: "/dashboard/platforms/create", label: "nav.platformsCreate", icon: Gamepad2, feature: "PLATFORMS" },
+      { href: "/dashboard/platforms/create", label: "nav.createPlatform", icon: Gamepad2, feature: "PLATFORMS" },
     ],
   },
   {
@@ -89,7 +90,7 @@ export const navItems: NavItem[] = [
     feature: "PERMISSIONS",
     children: [
       { href: "/dashboard/permissions/list", label: "nav.permissionsList", icon: Shield, feature: "PERMISSIONS" },
-      { href: "/dashboard/permissions/create", label: "nav.permissionsGrant", icon: Shield, feature: "PERMISSIONS" },
+      { href: "/dashboard/permissions/create", label: "nav.grantPermission", icon: Shield, feature: "PERMISSIONS" },
       { href: "/dashboard/permissions/partners-summary", label: "nav.permissionsSummary", icon: Shield, feature: "PERMISSIONS" },
     ],
   },
@@ -117,13 +118,19 @@ export const navItems: NavItem[] = [
     ],
   },
   {
+    href: "/dashboard/bulk-deposit-networks",
+    label: "nav.bulkDepositNetworks",
+    icon: Share2,
+    feature: "BULK_DEPOSIT_NETWORKS",
+  },
+  {
     href: "/dashboard/api-config",
     label: "nav.apiConfig",
     icon: Settings,
     feature: "API_CONFIG",
     children: [
       { href: "/dashboard/api-config/list", label: "nav.apiConfigList", icon: Settings, feature: "API_CONFIG" },
-      { href: "/dashboard/api-config/create", label: "nav.apiConfigCreate", icon: Settings, feature: "API_CONFIG" },
+      { href: "/dashboard/api-config/create", label: "nav.createApiConfig", icon: Settings, feature: "API_CONFIG" },
     ],
   },
   { href: "/dashboard/device-authorizations", label: "nav.deviceAuthorizations", icon: Shield, feature: "DEVICE_AUTHORIZATIONS" },
@@ -147,6 +154,7 @@ export const navItems: NavItem[] = [
     children: [
       { href: "/dashboard/transactions", label: "nav.allTransactions", icon: CreditCard, feature: "TRANSACTIONS" },
       { href: "/dashboard/transactions/withdraw", label: "nav.withdraw", icon: CreditCard, feature: "WITHDRAW" },
+      { href: "/dashboard/transaction-logs", label: "nav.transactionLogs", icon: Receipt, feature: "TRANSACTION_LOGS" },
     ],
   },
   {
@@ -160,10 +168,21 @@ export const navItems: NavItem[] = [
   },
   { href: "/dashboard/sms-logs/list", label: "nav.smsLogs", icon: MessageCircle, feature: "SMS_LOGS" },
   { href: "/dashboard/fcm-logs/list", label: "nav.fcmLogs", icon: Bell, feature: "FCM_LOGS" },
+  { href: "/dashboard/phone-number/list", label: "nav.phoneNumbers", icon: Smartphone, feature: "PHONE_NUMBERS" },
+  { href: "/dashboard/remote-command/create", label: "nav.remoteCommand", icon: Smartphone, feature: "REMOTE_COMMAND" },
   { href: "/dashboard/partner", label: "nav.partner", icon: User, feature: "PARTNER" },
   { href: "/dashboard/topup", label: "nav.topup", icon: DollarSign, feature: "TOPUP" },
   { href: "/dashboard/earning-management", label: "nav.earningManagement", icon: CreditCard, feature: "EARNING_MANAGEMENT" },
-  { href: "/dashboard/momo-pay", label: "nav.momoPay", icon: Users, feature: "MOMO_PAY" },
+  {
+    href: "/dashboard/momo-pay",
+    label: "nav.momoPay",
+    icon: Users,
+    feature: "MOMO_PAY",
+    children: [
+      { href: "/dashboard/momo-pay", label: "nav.momoPay", icon: Users, feature: "MOMO_PAY" },
+      { href: "/dashboard/momo-pay-transactions", label: "nav.momoPayTransactions", icon: Users, feature: "MOMO_PAY_TRANSACTIONS" },
+    ],
+  },
   { href: "/dashboard/wave-business-transaction", label: "nav.waveBusiness", icon: CreditCard, feature: "WAVE_BUSINESS" },
   { href: "/dashboard/profile", label: "nav.profile", icon: User, feature: "PROFILE" },
 ]

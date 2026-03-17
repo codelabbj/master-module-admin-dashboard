@@ -34,7 +34,7 @@ export default function ApiConfigCreatePage() {
     setLoading(true)
     setError("")
     try {
-      await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/api-configs/`, {
+      await apiFetch(`${baseUrl}/api/api-configs/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, base_url: baseUrl, api_key: apiKey, description, is_active: isActive })
@@ -264,3 +264,4 @@ export default function ApiConfigCreatePage() {
     </div>
   )
 }
+

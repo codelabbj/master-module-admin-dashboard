@@ -1,48 +1,62 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import Link from "next/link"
-import { useApi } from "@/lib/useApi"
-import { useLanguage } from "@/components/providers/language-provider"
-import { 
-  Search, 
-  Shield, 
-  Filter,
-  RefreshCw
-} from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
+import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useLanguage } from "@/components/providers/language-provider"
+import { Search, Users, PieChart, TrendingUp, DollarSign } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { useApi } from "@/lib/useApi"
+import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
+import Link from "next/link"
 
-const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
-
-export default function PartnersSummaryPage() {
+export default function PartnersPermissionsSummaryPage() {
+  const [searchTerm, setSearchTerm] = useState("")
   const [partners, setPartners] = useState<any[]>([])
+  const [totalPartners, setTotalPartners] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [searchTerm, setSearchTerm] = useState("")
-  const apiFetch = useApi()
+  const [selectedPartner, setSelectedPartner] = useState<any | null>(null)
+  
   const { t } = useLanguage()
-  const { toast } = useToast();
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+  const { toast } = useToast()
+  const apiFetch = useApi()
+  
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
 
   useEffect(() => {
-    const fetchPartners = async () => {
+    const fetchPartnersSummary = async () => {
       setLoading(true)
       setError("")
       try {
-        const data = await apiFetch(`${baseUrl}/api/partners/`)
-        const partnersData = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : []
-        setPartners(partnersData)
+        const endpoint = `${baseUrl}/api/payments/betting/admin/permissions/user_platforms_summary/`
+        const data = await apiFetch(endpoint)
+        
+        let filteredPartners = data.partners || []
+        
+        if (searchTerm.trim() !== "") {
+          filteredPartners = filteredPartners.filter((partner: any) =>
+            (partner.display_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (partner.email || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (partner.first_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (partner.last_name || "").toLowerCase().includes(searchTerm.toLowerCase())
+          )
+        }
+        
+        setPartners(filteredPartners)
+        setTotalPartners(data.total_partners || 0)
       } catch (err: any) {
-        const errorMessage = extractErrorMessages(err) || t("partners.failedToLoad") || "Failed to load partners"
+        const errorMessage = extractErrorMessages(err)
         setError(errorMessage)
+        setPartners([])
+        setTotalPartners(0)
         toast({
-          title: t("partners.failedToLoad") || "Failed to load",
+          title: t("permissions.failedToLoadPartnersSummary"),
           description: errorMessage,
           variant: "destructive",
         })
@@ -50,199 +64,221 @@ export default function PartnersSummaryPage() {
         setLoading(false)
       }
     }
+    
+    fetchPartnersSummary()
+  }, [searchTerm])
 
-    fetchPartners()
-  }, [searchTerm, apiFetch, t, toast])
+  const getStatusBadge = (isActive: boolean) => {
+    return (
+      <Badge variant={isActive ? "default" : "secondary"}>
+        {isActive ? t("common.active") : t("common.inactive")}
+      </Badge>
+    )
+  }
 
-  const filteredPartners = useMemo(() => {
-    let filtered = partners
+  const getPermissionBadge = (totalPermissions: number, activePermissions: number) => {
+    const ratio = totalPermissions > 0 ? activePermissions / totalPermissions : 0
+    if (ratio === 0) return <Badge variant="secondary">{t("permissions.noPermissions")}</Badge>
+    if (ratio === 1) return <Badge variant="default">{t("permissions.allActive")}</Badge>
+    return <Badge variant="outline">{t("permissions.partial")}</Badge>
+  }
 
-    if (searchTerm) {
-      filtered = filtered.filter(partner =>
-        partner.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        partner.email?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    }
+  const getCommissionBadge = (totalCommission: number, unpaidCommission: number) => {
+    if (unpaidCommission === 0) return <Badge variant="default">{t("permissions.allPaid")}</Badge>
+    if (unpaidCommission === totalCommission && totalCommission > 0) return <Badge variant="destructive">{t("permissions.allUnpaid")}</Badge>
+    return <Badge variant="outline">{t("permissions.partialUnpaid")}</Badge>
+  }
 
-    return filtered
-  }, [partners, searchTerm])
+  const formatCurrency = (amount: number) => {
+    return `${(amount || 0).toLocaleString()} XOF`
+  }
 
-  const handleRefresh = async () => {
-    setLoading(true)
-    setError("")
-    try {
-      const data = await apiFetch(`${baseUrl}/api/partners/`)
-      const partnersData = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : []
-      setPartners(partnersData)
-      toast({
-        title: t("partners.loaded") || "Partners refreshed",
-        description: t("partners.loadedSuccessfully") || "Partner list refreshed successfully",
-      })
-    } catch (err: any) {
-      const errorMessage = extractErrorMessages(err) || t("partners.failedToLoad") || "Failed to load partners"
-      setError(errorMessage)
-      toast({
-        title: t("partners.failedToLoad") || "Failed to load",
-        description: errorMessage,
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
+  const calculateCommissionPercentage = (totalCommission: number, unpaidCommission: number) => {
+    if (totalCommission === 0) return "0%"
+    return `${((unpaidCommission / totalCommission) * 100).toFixed(1)}%`
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-foreground tracking-tight">
-            Partners Summary
-          </h1>
-          <p className="text-muted-foreground">
-            View partner permissions summary
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
-            <Shield className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-foreground">
-              {filteredPartners.length} partners
-            </span>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search a partner..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-                variant="minimal"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Partners Table */}
+    <>
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
-            Partners Summary
+            <Users className="h-5 w-5" />
+            {t("permissions.partnersSummary")}
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="flex flex-col items-center space-y-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <span className="text-muted-foreground">Loading partners...</span>
+        <CardContent>
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-4">{t("permissions.summaryStatistics")}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium">{t("permissions.totalPartners")}</span>
+                </div>
+                <div className="text-2xl font-bold text-blue-600">{totalPartners}</div>
+              </div>
+              
+              <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium">{t("permissions.activePartners")}</span>
+                </div>
+                <div className="text-2xl font-bold text-green-600">
+                  {partners.filter(p => p.is_active).length}
+                </div>
+              </div>
+              
+              <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <PieChart className="h-4 w-4 text-orange-600" />
+                  <span className="text-sm font-medium">{t("permissions.partnerPermissions")}</span>
+                </div>
+                <div className="text-2xl font-bold text-orange-600">
+                  {partners.reduce((sum, p) => sum + (p.permission_summary?.total_permissions || 0), 0)}
+                </div>
+              </div>
+              
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-red-600" />
+                  <span className="text-sm font-medium">{t("permissions.unpaidCommission")}</span>
+                </div>
+                <div className="text-2xl font-bold text-red-600">
+                  {formatCurrency(partners.reduce((sum, p) => sum + (p.transaction_summary?.unpaid_commission || 0), 0))}
+                </div>
               </div>
             </div>
-          ) : error ? (
-            <div className="p-6 text-center">
-              <ErrorDisplay error={error} />
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder={t("permissions.searchPartners")}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
-          ) : (
-            <div className="overflow-x-auto">
+          </div>
+
+          <div className="rounded-md border">
+            {loading ? (
+              <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>
+            ) : error ? (
+              <ErrorDisplay error={error} onRetry={() => setSearchTerm("")} variant="full" showDismiss={false} />
+            ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="font-semibold">Partner</TableHead>
-                    <TableHead className="font-semibold">Email</TableHead>
-                    <TableHead className="font-semibold">Permissions</TableHead>
-                    <TableHead className="font-semibold text-right">Actions</TableHead>
+                    <TableHead>{t("permissions.partner")}</TableHead>
+                    <TableHead>{t("permissions.status")}</TableHead>
+                    <TableHead>{t("permissions.permissionsLabel")}</TableHead>
+                    <TableHead>{t("permissions.transactionStats")}</TableHead>
+                    <TableHead>{t("permissions.commissionStatus")}</TableHead>
+                    <TableHead>{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPartners.map((partner) => (
-                    <TableRow key={partner.id} className="hover:bg-accent/50">
+                  {partners.map((partner) => (
+                    <TableRow key={partner.user_uid}>
                       <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Shield className="h-5 w-5 text-primary" />
+                        <div className="space-y-1">
+                          <div className="font-medium">{partner.display_name}</div>
+                          <div className="text-sm text-muted-foreground">{partner.email || t("permissions.noEmail")}</div>
+                          <div className="text-xs text-muted-foreground">{t("common.uid")}: {partner.user_uid?.slice(0, 8)}...</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(partner.is_active)}</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div>{getPermissionBadge(partner.permission_summary?.total_permissions || 0, partner.permission_summary?.active_permissions || 0)}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {partner.permission_summary?.total_permissions || 0} {t("permissions.total")}, {partner.permission_summary?.active_permissions || 0} {t("common.active")?.toLowerCase()}
                           </div>
-                          <div>
-                            <div className="font-medium text-foreground">
-                              {partner.name || "N/A"}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              ID: {partner.id || "N/A"}
-                            </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="text-sm font-medium">
+                            {partner.transaction_summary?.total_transactions || 0} {t("permissions.transactions")}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {formatCurrency(partner.transaction_summary?.total_commission || 0)} total
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm text-muted-foreground">
-                          {partner.email || "N/A"}
+                        <div className="space-y-1">
+                          <div>{getCommissionBadge(partner.transaction_summary?.total_commission || 0, partner.transaction_summary?.unpaid_commission || 0)}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {formatCurrency(partner.transaction_summary?.unpaid_commission || 0)} {t("permissions.unpaid")}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {partner.permissions && partner.permissions.length > 0 ? (
-                            partner.permissions.map((perm: any) => (
-                              <Badge key={perm.id} variant="outline">
-                                {perm.name}
-                              </Badge>
-                            ))
-                          ) : (
-                            <span className="text-sm text-muted-foreground">No permissions</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Link href={`/dashboard/permissions/partner/${partner.id}`}>
-                            <Button variant="ghost" size="sm">
-                              Manage
-                            </Button>
-                          </Link>
-                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => { setSelectedPartner(partner); setDetailModalOpen(true); }}
+                        >
+                          {t("permissions.viewDetails")}
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </div>
-          )}
+            )}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Empty State */}
-      {!loading && filteredPartners.length === 0 && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <div className="space-y-4">
-              <div className="h-16 w-16 rounded-full bg-accent mx-auto flex items-center justify-center">
-                <Shield className="h-8 w-8 text-muted-foreground" />
+      <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t("permissions.partnerDetailedInformation")}</DialogTitle>
+          </DialogHeader>
+          {selectedPartner ? (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2 text-sm">
+                  <div><strong>{t("permissions.displayName")}:</strong> {selectedPartner.display_name}</div>
+                  <div><strong>{t("commissionPayments.email")}:</strong> {selectedPartner.email || t("permissions.notProvided")}</div>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div><strong>{t("common.uid")}:</strong> <code>{selectedPartner.user_uid}</code></div>
+                  <div><strong>{t("permissions.status")}:</strong> {getStatusBadge(selectedPartner.is_active)}</div>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">No partners found</h3>
-                <p className="text-muted-foreground">
-                  {searchTerm 
-                    ? "No partners match your search criteria."
-                    : "Start by adding your first partner."
-                  }
-                </p>
+
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-3">{t("permissions.permissionSummary")}</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
+                    <div className="text-xs font-medium text-blue-600">{t("permissions.totalPermissions")}</div>
+                    <div className="text-lg font-bold text-blue-600">{selectedPartner.permission_summary?.total_permissions || 0}</div>
+                  </div>
+                  <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg text-center">
+                    <div className="text-xs font-medium text-green-600">{t("permissions.activePermissions")}</div>
+                    <div className="text-lg font-bold text-green-600">{selectedPartner.permission_summary?.active_permissions || 0}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button asChild>
+                  <Link href={`/dashboard/permissions/user-platforms/${selectedPartner.user_uid}`}>
+                    {t("permissions.viewPlatformPermissions")}
+                  </Link>
+                </Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
+

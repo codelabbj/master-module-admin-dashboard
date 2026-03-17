@@ -37,7 +37,7 @@ export default function PartnerDetailsPage({ params }: { params: Promise<{ user_
       setLoading(true);
       setError("");
       try {
-        const endpoint = `${baseUrl.replace(/\/$/, "")}/api/auth/admin/users/partners/${userId}/`;
+        const endpoint = `${baseUrl}/api/auth/admin/users/partners/${userId}/`;
         const data = await apiFetch(endpoint);
         setPartner(data);
       } catch (err: any) {

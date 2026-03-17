@@ -43,6 +43,8 @@ import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-displa
 export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [startDate, setStartDate] = useState("")
+  const [endDate, setEndDate] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [users, setUsers] = useState<any[]>([])
   const [totalCount, setTotalCount] = useState(0)
@@ -60,6 +62,29 @@ export default function UsersPage() {
   const [deactivatingUid, setDeactivatingUid] = useState<string | null>(null)
   const [selectedUids, setSelectedUids] = useState<string[]>([]);
   const [copiedUid, setCopiedUid] = useState<string | null>(null);
+
+  // Verification states
+  const [verifyingEmail, setVerifyingEmail] = useState(false);
+  const [verifyingPhone, setVerifyingPhone] = useState(false);
+  const [verifyingPartner, setVerifyingPartner] = useState(false);
+  const [verifyingUssd, setVerifyingUssd] = useState(false);
+  const [verifyingAggregator, setVerifyingAggregator] = useState(false);
+  const [verifyingMomo, setVerifyingMomo] = useState(false);
+  const [verifyingMobcash, setVerifyingMobcash] = useState(false);
+  const [verifyingBulkPayment, setVerifyingBulkPayment] = useState(false);
+
+  // Confirmation toggle states
+  const [confirmEmailToggle, setConfirmEmailToggle] = useState<null | boolean>(null);
+  const [confirmPhoneToggle, setConfirmPhoneToggle] = useState<null | boolean>(null);
+  const [confirmPartnerToggle, setConfirmPartnerToggle] = useState<null | boolean>(null);
+  const [confirmUssdToggle, setConfirmUssdToggle] = useState<null | boolean>(null);
+  const [confirmAggregatorToggle, setConfirmAggregatorToggle] = useState<null | boolean>(null);
+  const [confirmMomoToggle, setConfirmMomoToggle] = useState<null | boolean>(null);
+  const [confirmMobcashToggle, setConfirmMobcashToggle] = useState<null | boolean>(null);
+  const [confirmBulkPaymentToggle, setConfirmBulkPaymentToggle] = useState<null | boolean>(null);
+
+  const [confirmActionUser, setConfirmActionUser] = useState<any | null>(null);
+  const [confirmActionType, setConfirmActionType] = useState<"activate" | "deactivate" | null>(null);
 
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -79,19 +104,6 @@ export default function UsersPage() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState("")
 
-  const [verifyingEmail, setVerifyingEmail] = useState(false);
-  const [verifyingPhone, setVerifyingPhone] = useState(false);
-  const [verifyingPartner, setVerifyingPartner] = useState(false);
-  const [verifyingUssd, setVerifyingUssd] = useState(false);
-
-  const [confirmEmailToggle, setConfirmEmailToggle] = useState<null | boolean>(null);
-  const [confirmPhoneToggle, setConfirmPhoneToggle] = useState<null | boolean>(null);
-  const [confirmPartnerToggle, setConfirmPartnerToggle] = useState<null | boolean>(null);
-  const [confirmUssdToggle, setConfirmUssdToggle] = useState<null | boolean>(null);
-
-  const [confirmActionUser, setConfirmActionUser] = useState<any | null>(null);
-  const [confirmActionType, setConfirmActionType] = useState<"activate" | "deactivate" | null>(null);
-
   // Fetch users from API
   useEffect(() => {
     const fetchUsers = async () => {
@@ -99,7 +111,7 @@ export default function UsersPage() {
       setError("");
       try {
         let endpoint = "";
-        if (searchTerm.trim() !== "" || statusFilter !== "all" || sortField) {
+        if (searchTerm.trim() !== "" || statusFilter !== "all" || sortField || startDate || endDate) {
           const params = new URLSearchParams({
             page: currentPage.toString(),
             page_size: itemsPerPage.toString(),
@@ -110,13 +122,22 @@ export default function UsersPage() {
           if (statusFilter !== "all") {
             params.append("status", statusFilter);
           }
+          if (startDate) {
+            params.append("created_at__gte", startDate);
+          }
+          if (endDate) {
+            // Add one day to end date to include the entire end date
+            const endDateObj = new Date(endDate);
+            endDateObj.setDate(endDateObj.getDate() + 1);
+            params.append("created_at__lt", endDateObj.toISOString().split('T')[0]);
+          }
           const orderingParam = sortField
             ? `&ordering=${(sortDirection === "asc" ? "+" : "-")}${(sortField === "display_name" ? "display_name" : sortField)}`
             : "";
           endpoint =
             viewType === "pending"
-              ? `${baseUrl.replace(/\/$/, "")}/api/auth/admin/users/pending/?${params.toString()}${orderingParam}`
-              : `${baseUrl.replace(/\/$/, "")}/api/auth/admin/users/?${params.toString()}${orderingParam}`;
+              ? `${baseUrl}/api/auth/admin/users/pending/?${params.toString()}${orderingParam}`
+              : `${baseUrl}/api/auth/admin/users/?${params.toString()}${orderingParam}`;
         } else {
           const params = new URLSearchParams({
             page: currentPage.toString(),
@@ -124,19 +145,26 @@ export default function UsersPage() {
           });
           endpoint =
             viewType === "pending"
-              ? `${baseUrl.replace(/\/$/, "")}/api/auth/admin/users/pending/?${params.toString()}`
-              : `${baseUrl.replace(/\/$/, "")}/api/auth/admin/users/?${params.toString()}`;
+              ? `${baseUrl}/api/auth/admin/users/pending/?${params.toString()}`
+              : `${baseUrl}/api/auth/admin/users/?${params.toString()}`;
         }
         console.log("User API endpoint:", endpoint);
         const data = await apiFetch(endpoint);
         console.log("API response data:", data);
 
         // Handle the actual API response structure
-        const users = data.users || data.results || [];
+        const usersData = data.users || data.results || [];
         const totalCount = data.pagination?.total_count || data.count || 0;
         const totalPages = data.pagination?.total_pages || Math.ceil(totalCount / itemsPerPage);
 
-        setUsers(users);
+        const usersWithDefaults = (usersData || []).map((u: any) => ({
+          ...u,
+          can_process_momo: u.can_process_momo !== undefined ? u.can_process_momo : true,
+          can_process_mobcash: u.can_process_mobcash !== undefined ? u.can_process_mobcash : true,
+          can_process_bulk_payment: u.can_process_bulk_payment !== undefined ? u.can_process_bulk_payment : true,
+        }));
+
+        setUsers(usersWithDefaults);
         setTotalCount(totalCount);
         setTotalPages(totalPages);
         toast({
@@ -158,7 +186,7 @@ export default function UsersPage() {
       }
     };
     fetchUsers();
-  }, [searchTerm, statusFilter, currentPage, sortField, sortDirection, viewType]);
+  }, [searchTerm, statusFilter, currentPage, sortField, sortDirection, viewType, startDate, endDate]);
 
   const filteredUsers = users // Filtering is now handled by the API
   const startIndex = (currentPage - 1) * itemsPerPage
@@ -188,7 +216,7 @@ export default function UsersPage() {
     if (!user.uid) return
     setActivatingUid(user.uid)
     try {
-      const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/auth/admin/users/${user.uid}/activate/`, {
+      const data = await apiFetch(`${baseUrl}/api/auth/admin/users/${user.uid}/activate/`, {
         method: "PATCH",
       })
       toast({ title: "Utilisateur activé", description: data.message || "Utilisateur activé avec succès" })
@@ -205,7 +233,7 @@ export default function UsersPage() {
     if (!user.uid) return
     setDeactivatingUid(user.uid)
     try {
-      const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/auth/admin/users/${user.uid}/deactivate/`, {
+      const data = await apiFetch(`${baseUrl}/api/auth/admin/users/${user.uid}/deactivate/`, {
         method: "PATCH",
       })
       toast({ title: "Utilisateur désactivé", description: data.message || "Utilisateur désactivé avec succès" })
@@ -234,7 +262,7 @@ export default function UsersPage() {
     if (selectedUids.length === 0) return
     setLoading(true)
     try {
-      const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/auth/admin/users/bulk-action/`, {
+      const data = await apiFetch(`${baseUrl}/api/auth/admin/users/bulk-action/`, {
         method: "POST",
         body: JSON.stringify({ action, user_ids: selectedUids }),
       })
@@ -256,9 +284,16 @@ export default function UsersPage() {
     setDetailError("")
     setDetailUser(null)
     try {
-      const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/auth/admin/users/${uid}/`)
-      setDetailUser(data)
-      toast({ title: "Détails chargés", description: "Détails de l'utilisateur chargés avec succès" })
+      const data = await apiFetch(`${baseUrl}/api/auth/admin/users/${uid}/`)
+      const userWithDefaults = {
+        ...data,
+        can_process_momo: data.can_process_momo !== undefined ? data.can_process_momo : true,
+        can_process_mobcash: data.can_process_mobcash !== undefined ? data.can_process_mobcash : true,
+        can_process_bulk_payment: data.can_process_bulk_payment !== undefined ? data.can_process_bulk_payment : true,
+      };
+      setDetailUser(userWithDefaults);
+      // Update the user in the list as well if it's there
+      setUsers((prev) => prev.map((u) => u.uid === uid ? userWithDefaults : u));
     } catch (err: any) {
       setDetailError(extractErrorMessages(err))
       toast({ title: "Échec du chargement des détails", description: extractErrorMessages(err), variant: "destructive" })
@@ -278,7 +313,7 @@ export default function UsersPage() {
     if (!detailUser?.uid) return;
     setVerifyingEmail(true);
     try {
-      const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/auth/admin/users/${detailUser.uid}/update/`, {
+      const data = await apiFetch(`${baseUrl}/api/auth/admin/users/${detailUser.uid}/update/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email_verified: true }),
@@ -297,7 +332,7 @@ export default function UsersPage() {
     if (!detailUser?.uid) return;
     setVerifyingPhone(true);
     try {
-      const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/auth/admin/users/${detailUser.uid}/update/`, {
+      const data = await apiFetch(`${baseUrl}/api/auth/admin/users/${detailUser.uid}/update/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone_verified: true }),
@@ -316,7 +351,7 @@ export default function UsersPage() {
     if (!detailUser?.uid) return;
     setVerifyingEmail(true);
     try {
-      const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/auth/admin/users/${detailUser.uid}/update/`, {
+      const data = await apiFetch(`${baseUrl}/api/auth/admin/users/${detailUser.uid}/update/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email_verified: verify }),
@@ -335,7 +370,7 @@ export default function UsersPage() {
     if (!detailUser?.uid) return;
     setVerifyingPhone(true);
     try {
-      const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/auth/admin/users/${detailUser.uid}/update/`, {
+      const data = await apiFetch(`${baseUrl}/api/auth/admin/users/${detailUser.uid}/update/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone_verified: verify }),
@@ -354,7 +389,7 @@ export default function UsersPage() {
     if (!detailUser?.uid) return;
     setVerifyingPartner(true);
     try {
-      const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/auth/admin/users/${detailUser.uid}/update/`, {
+      const data = await apiFetch(`${baseUrl}/api/auth/admin/users/${detailUser.uid}/update/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ is_partner: isPartner }),
@@ -373,16 +408,12 @@ export default function UsersPage() {
     if (!detailUser?.uid) return;
     setVerifyingUssd(true);
     try {
-      const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/auth/admin/users/${detailUser.uid}/update/`, {
+      const data = await apiFetch(`${baseUrl}/api/auth/admin/users/${detailUser.uid}/update/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ can_process_ussd_transaction: canProcess }),
       });
       setDetailUser((prev: any) => prev ? { ...prev, can_process_ussd_transaction: canProcess } : prev);
-      toast({
-        title: "Statut USSD modifié",
-        description: canProcess ? "Transaction USSD activée avec succès" : "Transaction USSD désactivée avec succès"
-      });
     } catch (err: any) {
       toast({
         title: "Échec de la modification du statut USSD",
@@ -391,6 +422,77 @@ export default function UsersPage() {
       });
     } finally {
       setVerifyingUssd(false);
+    }
+  };
+
+  const handleToggleAggregator = async (isAggregator: boolean) => {
+    if (!detailUser?.uid) return;
+    setVerifyingAggregator(true);
+    try {
+      const data = await apiFetch(`${baseUrl}/api/auth/admin/users/${detailUser.uid}/update/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_aggregator: isAggregator }),
+      });
+      setDetailUser((prev: any) => prev ? { ...prev, is_aggregator: isAggregator } : prev);
+    } catch (err: any) {
+      toast({ title: t("users.aggregatorToggleFailed"), description: extractErrorMessages(err), variant: "destructive" });
+    } finally {
+      setVerifyingAggregator(false);
+    }
+  };
+
+  const handleToggleMomo = async (canProcess: boolean) => {
+    if (!detailUser?.uid) return;
+    setVerifyingMomo(true);
+    try {
+      await apiFetch(`${baseUrl}/api/auth/admin/users/${detailUser.uid}/update/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ can_process_momo: canProcess }),
+      });
+      setDetailUser((prev: any) => prev ? { ...prev, can_process_momo: canProcess } : prev);
+      setUsers((prev) => prev.map((u) => (u.uid === detailUser.uid ? { ...u, can_process_momo: canProcess } : u)));
+    } catch (err: any) {
+      toast({ title: t("users.momoToggleFailed"), description: extractErrorMessages(err), variant: "destructive" });
+    } finally {
+      setVerifyingMomo(false);
+    }
+  };
+
+  const handleToggleMobcash = async (canProcess: boolean) => {
+    if (!detailUser?.uid) return;
+    setVerifyingMobcash(true);
+    try {
+      await apiFetch(`${baseUrl}/api/auth/admin/users/${detailUser.uid}/update/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ can_process_mobcash: canProcess }),
+      });
+      setDetailUser((prev: any) => prev ? { ...prev, can_process_mobcash: canProcess } : prev);
+      setUsers((prev) => prev.map((u) => (u.uid === detailUser.uid ? { ...u, can_process_mobcash: canProcess } : u)));
+    } catch (err: any) {
+      toast({ title: t("users.mobcashToggleFailed"), description: extractErrorMessages(err), variant: "destructive" });
+    } finally {
+      setVerifyingMobcash(false);
+    }
+  };
+
+  const handleToggleBulkPayment = async (canProcess: boolean) => {
+    if (!detailUser?.uid) return;
+    setVerifyingBulkPayment(true);
+    try {
+      await apiFetch(`${baseUrl}/api/auth/admin/users/${detailUser.uid}/update/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ can_process_bulk_payment: canProcess }),
+      });
+      setDetailUser((prev: any) => prev ? { ...prev, can_process_bulk_payment: canProcess } : prev);
+      setUsers((prev) => prev.map((u) => (u.uid === detailUser.uid ? { ...u, can_process_bulk_payment: canProcess } : u)));
+    } catch (err: any) {
+      toast({ title: t("users.bulkPaymentToggleFailed"), description: extractErrorMessages(err), variant: "destructive" });
+    } finally {
+      setVerifyingBulkPayment(false);
     }
   };
 
@@ -488,6 +590,53 @@ export default function UsersPage() {
                 </Button>
               </div>
             )}
+          </div>
+
+          {/* Date Filters */}
+          <div className="flex flex-col lg:flex-row gap-4 mt-6">
+            <div className="flex flex-col lg:flex-row gap-4 flex-1">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t("users.startDate") || "Date de début"}
+                </label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value)
+                    setCurrentPage(1)
+                  }}
+                  className="w-full lg:w-48"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t("users.endDate") || "Date de fin"}
+                </label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => {
+                    setEndDate(e.target.value)
+                    setCurrentPage(1)
+                  }}
+                  className="w-full lg:w-48"
+                />
+              </div>
+            </div>
+            <div className="flex items-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStartDate("")
+                  setEndDate("")
+                  setCurrentPage(1)
+                }}
+                className="h-10"
+              >
+                {t("users.clearDates") || "Effacer les dates"}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -835,6 +984,54 @@ export default function UsersPage() {
                     onCheckedChange={() => setConfirmUssdToggle(!detailUser.can_process_ussd_transaction)}
                   />
                 </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">{t("users.isAggregator") || "Agrégateur"}</Label>
+                    <p className="text-xs text-muted-foreground">Désigner cet utilisateur comme agrégateur</p>
+                  </div>
+                  <Switch
+                    checked={detailUser.is_aggregator}
+                    disabled={detailLoading || verifyingAggregator}
+                    onCheckedChange={() => setConfirmAggregatorToggle(!detailUser.is_aggregator)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">{t("users.canProcessMomo") || "MoMo"}</Label>
+                    <p className="text-xs text-muted-foreground">Autoriser les transactions MoMo</p>
+                  </div>
+                  <Switch
+                    checked={detailUser.can_process_momo}
+                    disabled={detailLoading || verifyingMomo}
+                    onCheckedChange={() => setConfirmMomoToggle(!detailUser.can_process_momo)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">{t("users.canProcessMobcash") || "MobCash"}</Label>
+                    <p className="text-xs text-muted-foreground">Autoriser les transactions MobCash</p>
+                  </div>
+                  <Switch
+                    checked={detailUser.can_process_mobcash}
+                    disabled={detailLoading || verifyingMobcash}
+                    onCheckedChange={() => setConfirmMobcashToggle(!detailUser.can_process_mobcash)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">{t("users.canProcessBulkPayment") || "Paiement en masse"}</Label>
+                    <p className="text-xs text-muted-foreground">Autoriser les paiements en masse</p>
+                  </div>
+                  <Switch
+                    checked={detailUser.can_process_bulk_payment}
+                    disabled={detailLoading || verifyingBulkPayment}
+                    onCheckedChange={() => setConfirmBulkPaymentToggle(!detailUser.can_process_bulk_payment)}
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-4 border-t">
@@ -987,6 +1184,138 @@ export default function UsersPage() {
               disabled={verifyingUssd}
             >
               Annuler
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmAggregatorToggle !== null} onOpenChange={(open) => { if (!open) setConfirmAggregatorToggle(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{confirmAggregatorToggle ? (t("users.enableAggregator") || "Activer l'agrégateur") : (t("users.disableAggregator") || "Désactiver l'agrégateur")}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-center">
+            {confirmAggregatorToggle
+              ? (t("users.confirmEnableAggregator") || "Êtes-vous sûr de vouloir désigner cet utilisateur comme agrégateur ?")
+              : (t("users.confirmDisableAggregator") || "Êtes-vous sûr de vouloir retirer le statut d'agrégateur à cet utilisateur ?")}
+          </div>
+          <DialogFooter>
+            <Button
+              className="w-full"
+              onClick={async () => {
+                await handleToggleAggregator(!!confirmAggregatorToggle);
+                setConfirmAggregatorToggle(null);
+              }}
+              disabled={verifyingAggregator}
+            >
+              {verifyingAggregator ? (t("users.verifying") || "Vérification...") : (t("common.ok") || "OK")}
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full mt-2"
+              onClick={() => setConfirmAggregatorToggle(null)}
+              disabled={verifyingAggregator}
+            >
+              {t("common.cancel") || "Annuler"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmMomoToggle !== null} onOpenChange={(open) => { if (!open) setConfirmMomoToggle(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{confirmMomoToggle ? (t("users.enableMomo") || "Activer MoMo") : (t("users.disableMomo") || "Désactiver MoMo")}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-center">
+            {confirmMomoToggle
+              ? (t("users.confirmEnableMomo") || "Voulez-vous autoriser les transactions MoMo pour cet utilisateur ?")
+              : (t("users.confirmDisableMomo") || "Voulez-vous désactiver les transactions MoMo pour cet utilisateur ?")}
+          </div>
+          <DialogFooter>
+            <Button
+              className="w-full"
+              onClick={async () => {
+                await handleToggleMomo(!!confirmMomoToggle);
+                setConfirmMomoToggle(null);
+              }}
+              disabled={verifyingMomo}
+            >
+              {verifyingMomo ? (t("users.verifying") || "Vérification...") : (t("common.ok") || "OK")}
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full mt-2"
+              onClick={() => setConfirmMomoToggle(null)}
+              disabled={verifyingMomo}
+            >
+              {t("common.cancel") || "Annuler"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmMobcashToggle !== null} onOpenChange={(open) => { if (!open) setConfirmMobcashToggle(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{confirmMobcashToggle ? (t("users.enableMobcash") || "Activer MobCash") : (t("users.disableMobcash") || "Désactiver MobCash")}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-center">
+            {confirmMobcashToggle
+              ? (t("users.confirmEnableMobcash") || "Voulez-vous autoriser les transactions MobCash pour cet utilisateur ?")
+              : (t("users.confirmDisableMobcash") || "Voulez-vous désactiver les transactions MobCash pour cet utilisateur ?")}
+          </div>
+          <DialogFooter>
+            <Button
+              className="w-full"
+              onClick={async () => {
+                await handleToggleMobcash(!!confirmMobcashToggle);
+                setConfirmMobcashToggle(null);
+              }}
+              disabled={verifyingMobcash}
+            >
+              {verifyingMobcash ? (t("users.verifying") || "Vérification...") : (t("common.ok") || "OK")}
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full mt-2"
+              onClick={() => setConfirmMobcashToggle(null)}
+              disabled={verifyingMobcash}
+            >
+              {t("common.cancel") || "Annuler"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmBulkPaymentToggle !== null} onOpenChange={(open) => { if (!open) setConfirmBulkPaymentToggle(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{confirmBulkPaymentToggle ? (t("users.enableBulkPayment") || "Activer paiement en masse") : (t("users.disableBulkPayment") || "Désactiver paiement en masse")}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-center">
+            {confirmBulkPaymentToggle
+              ? (t("users.confirmEnableBulkPayment") || "Voulez-vous autoriser les paiements en masse pour cet utilisateur ?")
+              : (t("users.confirmDisableBulkPayment") || "Voulez-vous désactiver les paiements en masse pour cet utilisateur ?")}
+          </div>
+          <DialogFooter>
+            <Button
+              className="w-full"
+              onClick={async () => {
+                await handleToggleBulkPayment(!!confirmBulkPaymentToggle);
+                setConfirmBulkPaymentToggle(null);
+              }}
+              disabled={verifyingBulkPayment}
+            >
+              {verifyingBulkPayment ? (t("users.verifying") || "Vérification...") : (t("common.ok") || "OK")}
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full mt-2"
+              onClick={() => setConfirmBulkPaymentToggle(null)}
+              disabled={verifyingBulkPayment}
+            >
+              {t("common.cancel") || "Annuler"}
             </Button>
           </DialogFooter>
         </DialogContent>

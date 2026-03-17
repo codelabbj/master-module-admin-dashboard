@@ -49,7 +49,7 @@ export default function CountryEditPage() {
       setLoading(true)
       setError("")
       try {
-        const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/countries/${uid}/`)
+        const data = await apiFetch(`${baseUrl}/api/payments/countries/${uid}/`)
         setNom(data.nom || "")
         setCode(data.code || "")
         setIsActive(data.is_active)
@@ -78,7 +78,7 @@ export default function CountryEditPage() {
     setSaving(true)
     setError("")
     try {
-      await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/countries/${uid}/`, {
+      await apiFetch(`${baseUrl}/api/payments/countries/${uid}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nom, code, is_active: isActive })

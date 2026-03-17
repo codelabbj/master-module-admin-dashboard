@@ -1,62 +1,100 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import Link from "next/link"
-import { useApi } from "@/lib/useApi"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogFooter } from "@/components/ui/dialog"
+import { Switch } from "@/components/ui/switch"
 import { useLanguage } from "@/components/providers/language-provider"
-import { 
-  Search, 
-  ArrowUpDown, 
-  Gamepad2, 
-  Plus, 
-  Filter, 
-  CheckCircle, 
-  XCircle,
-  Pencil,
-  Download,
-  RefreshCw
-} from "lucide-react"
+import { Search, ChevronLeft, ChevronRight, ArrowUpDown, MoreHorizontal, Copy, BarChart3 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
-import { Badge } from "@/components/ui/badge"
+import { useApi } from "@/lib/useApi"
+import Link from "next/link"
 
-const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+import { formatApiDateTime } from "@/lib/utils";
 
-export default function PlatformsListPage() {
-  const [platforms, setPlatforms] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [currentPage, setCurrentPage] = useState(1)
+export default function PlatformListPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [sortField, setSortField] = useState<"name" | "code" | null>(null)
-  const [sortDirection, setSortDirection] = useState<"+" | "-">("-")
-  const apiFetch = useApi()
+  const [startDate, setStartDate] = useState("")
+  const [endDate, setEndDate] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [platforms, setPlatforms] = useState<any[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | false>(false)
+  const [sortField, setSortField] = useState<"name" | "created_at" | null>(null)
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
   const { t } = useLanguage()
-  const { toast } = useToast();
+  const itemsPerPage = 20
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+  const { toast } = useToast()
+  const apiFetch = useApi()
+  
+  // Modal states
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
+  const [statsModalOpen, setStatsModalOpen] = useState(false)
+  const [selectedPlatform, setSelectedPlatform] = useState<any | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [statsLoading, setStatsLoading] = useState(false)
+  const [platformStats, setPlatformStats] = useState<any | null>(null)
+  const [togglingStatus, setTogglingStatus] = useState<string | null>(null)
 
+  // Fetch platforms from API
   useEffect(() => {
     const fetchPlatforms = async () => {
       setLoading(true)
-      setError("")
+      setError(false)
       try {
-        const data = await apiFetch(`${baseUrl}/api/platforms/`)
-        const platformData = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : []
-        setPlatforms(platformData)
+        const params = new URLSearchParams({
+          page: currentPage.toString(),
+          page_size: itemsPerPage.toString(),
+          ordering: sortField ? `${sortDirection === "asc" ? "" : "-"}${sortField}` : "-created_at",
+        })
+
+        if (searchTerm.trim() !== "") {
+          params.append("search", searchTerm)
+        }
+
+        if (statusFilter !== "all") {
+          params.append("is_active", statusFilter === "active" ? "true" : "false")
+        }
+
+        if (startDate) {
+          params.append("created_at__gte", startDate)
+        }
+
+        if (endDate) {
+          const endDateObj = new Date(endDate)
+          endDateObj.setDate(endDateObj.getDate() + 1)
+          params.append("created_at__lt", endDateObj.toISOString().split('T')[0])
+        }
+
+        const endpoint = `${baseUrl}/api/payments/betting/admin/platforms/?${params.toString()}`
+        const data = await apiFetch(endpoint)
+        
+        setPlatforms(data.results || [])
+        setTotalCount(data.count || 0)
+        setTotalPages(Math.ceil((data.count || 0) / itemsPerPage))
+        
         toast({
-          title: t("platforms.loaded") || "Platforms loaded",
-          description: t("platforms.loadedSuccessfully") || "Platform list loaded successfully",
+          title: t("platforms.loadedSuccessfully") || "Platforms loaded",
+          description: t("platforms.loadedSuccessfully") || "Platforms loaded successfully",
         })
       } catch (err: any) {
-        const errorMessage = extractErrorMessages(err) || t("platforms.failedToLoad") || "Failed to load platforms"
+        const errorMessage = extractErrorMessages(err)
         setError(errorMessage)
+        setPlatforms([])
+        setTotalCount(0)
+        setTotalPages(1)
         toast({
-          title: t("platforms.failedToLoad") || "Failed to load",
+          title: t("platforms.failedToLoad"),
           description: errorMessage,
           variant: "destructive",
         })
@@ -64,252 +102,402 @@ export default function PlatformsListPage() {
         setLoading(false)
       }
     }
-
     fetchPlatforms()
-  }, [searchTerm, statusFilter, currentPage, sortField, sortDirection])
+  }, [searchTerm, currentPage, statusFilter, startDate, endDate, sortField, sortDirection])
 
-  const filteredPlatforms = useMemo(() => {
-    let filtered = Array.isArray(platforms) ? platforms : []
-
-    if (searchTerm) {
-      filtered = filtered.filter(platform =>
-        platform.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        platform.code?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    }
-
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(platform => 
-        statusFilter === "active" ? platform.is_active : !platform.is_active
-      )
-    }
-
-    return filtered
-  }, [platforms, searchTerm, statusFilter])
-
-  const handleSort = (field: "name" | "code") => {
+  const handleSort = (field: "name" | "created_at") => {
     if (sortField === field) {
-      setSortDirection(sortDirection === "+" ? "-" : "+")
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
     } else {
       setSortField(field)
-      setSortDirection("-")
+      setSortDirection("desc")
     }
   }
 
-  const handleRefresh = async () => {
-    setLoading(true)
-    setError("")
+  // Fetch platform details
+  const handleOpenDetail = async (platform: any) => {
+    setDetailModalOpen(true)
+    setDetailLoading(true)
+    setSelectedPlatform(null)
     try {
-      const data = await apiFetch(`${baseUrl}/api/platforms/`)
-      const platformData = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : []
-      setPlatforms(platformData)
-      toast({
-        title: t("platforms.loaded") || "Platforms refreshed",
-        description: t("platforms.loadedSuccessfully") || "Platform list refreshed successfully",
-      })
+      const data = await apiFetch(`${baseUrl}/api/payments/betting/admin/platforms/${platform.uid}/`)
+      setSelectedPlatform(data)
     } catch (err: any) {
-      const errorMessage = extractErrorMessages(err) || t("platforms.failedToLoad") || "Failed to load platforms"
-      setError(errorMessage)
       toast({
-        title: t("platforms.failedToLoad") || "Failed to load",
-        description: errorMessage,
+        title: t("platforms.failedToLoadPlatform"),
+        description: extractErrorMessages(err),
         variant: "destructive",
       })
     } finally {
-      setLoading(false)
+      setDetailLoading(false)
     }
   }
 
-  return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-foreground tracking-tight">
-            Platforms
-          </h1>
-          <p className="text-muted-foreground">
-            Manage platforms available on the system
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
-            <Gamepad2 className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-foreground">
-              {filteredPlatforms.length} platforms
-            </span>
-          </div>
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Link href="/dashboard/platforms/create">
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Platform
-            </Button>
-          </Link>
-        </div>
-      </div>
+  // Fetch platform statistics
+  const handleOpenStats = async (platform: any) => {
+    setStatsModalOpen(true)
+    setStatsLoading(true)
+    setPlatformStats(null)
+    try {
+      const data = await apiFetch(`${baseUrl}/api/payments/betting/admin/platforms/${platform.uid}/stats/`)
+      setPlatformStats(data)
+    } catch (err: any) {
+      toast({
+        title: t("platforms.failedToLoad") || "Failed to load platform statistics",
+        description: extractErrorMessages(err),
+        variant: "destructive",
+      })
+    } finally {
+      setStatsLoading(false)
+    }
+  }
 
-      {/* Filters */}
+  // Toggle platform status
+  const handleToggleStatus = async (platform: any) => {
+    setTogglingStatus(platform.uid)
+    try {
+      const data = await apiFetch(`${baseUrl}/api/payments/betting/admin/platforms/${platform.uid}/toggle_status/`, {
+        method: "PATCH",
+      })
+      
+      setPlatforms(prev => prev.map(p => 
+        p.uid === platform.uid 
+          ? { ...p, is_active: data.is_active }
+          : p
+      ))
+    } catch (err: any) {
+      toast({
+        title: t("platforms.failedToUpdatePlatformStatus"),
+        description: extractErrorMessages(err),
+        variant: "destructive",
+      })
+    } finally {
+      setTogglingStatus(null)
+    }
+  }
+
+  const startIndex = (currentPage - 1) * itemsPerPage
+
+  return (
+    <>
       <Card>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <CardHeader>
+          <CardTitle>{t("platforms.title")}</CardTitle>
+          <Link href="/dashboard/platforms/create">
+            <Button className="mt-2">{t("platforms.add")}</Button>
+          </Link>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Search a platform..."
+                placeholder={t("platforms.search")}
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value)
+                  setCurrentPage(1)
+                }}
                 className="pl-10"
-                variant="minimal"
               />
             </div>
-
-            {/* Status Filter */}
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by status" />
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder={t("platforms.filterByStatus")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="all">{t("platforms.allStatus")}</SelectItem>
+                <SelectItem value="active">{t("platforms.active")}</SelectItem>
+                <SelectItem value="inactive">{t("platforms.inactive")}</SelectItem>
               </SelectContent>
             </Select>
+          </div>
 
-            {/* Quick Actions */}
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                Advanced filters
+          <div className="flex flex-col lg:flex-row gap-4 mb-6">
+            <div className="flex flex-col lg:flex-row gap-4 flex-1">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t("platforms.startDate")}
+                </label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value)
+                    setCurrentPage(1)
+                  }}
+                  className="w-full lg:w-48"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t("platforms.endDate")}
+                </label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => {
+                    setEndDate(e.target.value)
+                    setCurrentPage(1)
+                  }}
+                  className="w-full lg:w-48"
+                />
+              </div>
+            </div>
+            <div className="flex items-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStartDate("")
+                  setEndDate("")
+                  setCurrentPage(1)
+                }}
+                className="h-10"
+              >
+                {t("platforms.clearDates")}
+              </Button>
+            </div>
+          </div>
+
+          <div className="rounded-md border">
+            {loading ? (
+              <div className="p-8 text-center text-muted-foreground">{t("platforms.loading") || t("common.loading")}</div>
+            ) : error ? (
+              <ErrorDisplay
+                error={error}
+                onRetry={() => {
+                  setCurrentPage(1)
+                  setError(false)
+                }}
+                variant="full"
+                showDismiss={false}
+              />
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>UID</TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => handleSort("name")} className="h-auto p-0 font-semibold">
+                        {t("platforms.name")}
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                      </Button>
+                    </TableHead>
+                    <TableHead>{t("platforms.externalId")}</TableHead>
+                    <TableHead>{t("platforms.status")}</TableHead>
+                    <TableHead>{t("platforms.minDeposit")}</TableHead>
+                    <TableHead>{t("platforms.maxDeposit")}</TableHead>
+                    <TableHead>{t("platforms.activePartners")}</TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => handleSort("created_at")} className="h-auto p-0 font-semibold">
+                        {t("platforms.createdAt")}
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                      </Button>
+                    </TableHead>
+                    <TableHead>{t("platforms.actions")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {platforms.map((platform) => (
+                    <TableRow key={platform.uid}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <code className="px-1 py-0.5 bg-muted rounded text-xs">
+                            {platform.uid.slice(0, 8)}...
+                          </code>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5"
+                            onClick={() => {
+                              navigator.clipboard.writeText(platform.uid)
+                              toast({ title: t("platforms.uidCopied") })
+                            }}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">{platform.name}</TableCell>
+                      <TableCell>{platform.external_id}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {platform.is_active ? (
+                            <img src="/icon-yes.svg" alt="Active" className="h-4 w-4" />
+                          ) : (
+                            <img src="/icon-no.svg" alt="Inactive" className="h-4 w-4" />
+                          )}
+                          <span className="text-sm">{platform.is_active ? t("common.active") : t("common.inactive")}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{platform.min_deposit_amount}</TableCell>
+                      <TableCell>{platform.max_deposit_amount}</TableCell>
+                      <TableCell>{platform.active_partners_count || 0}</TableCell>
+                      <TableCell>{platform.created_at ? platform.created_at.split("T")[0] : "-"}</TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleOpenDetail(platform)}>
+                              {t("platforms.viewQuickDetails")}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Link href={`/dashboard/platforms/details/${platform.uid}`}>
+                                {t("platforms.fullDetailsPage")}
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleOpenStats(platform)}>
+                              <BarChart3 className="mr-2 h-4 w-4" />
+                              {t("platforms.statistics")}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Link href={`/dashboard/platforms/edit/${platform.uid}`}>
+                                {t("platforms.editPlatform")}
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleToggleStatus(platform)}
+                              disabled={togglingStatus === platform.uid}
+                            >
+                              {togglingStatus === platform.uid ? (
+                                <span className="flex items-center">
+                                  <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                                  </svg>
+                                  {t("platforms.toggling") || "Toggling..."}
+                                </span>
+                              ) : platform.is_active ? (
+                                t("platforms.deactivate")
+                              ) : (
+                                t("platforms.activate")
+                              )}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between mt-6">
+            <div className="text-sm text-muted-foreground">
+              {t("common.showing") || "Showing"}: {startIndex + 1}-{Math.min(startIndex + itemsPerPage, totalCount)} {t("common.of") || "of"} {totalCount}
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                {t("common.previous")}
+              </Button>
+              <div className="text-sm">
+                {t("common.page") || "Page"} {currentPage} {t("common.of") || "of"} {totalPages}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                {t("common.next")}
+                <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Platforms Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Gamepad2 className="h-5 w-5 text-primary" />
-            Platform list
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="flex flex-col items-center space-y-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <span className="text-muted-foreground">Loading platforms...</span>
-              </div>
-            </div>
-          ) : error ? (
-            <div className="p-6 text-center">
-              <ErrorDisplay error={error} />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="font-semibold">Platform</TableHead>
-                    <TableHead className="font-semibold">Code</TableHead>
-                    <TableHead className="font-semibold">Description</TableHead>
-                    <TableHead className="font-semibold">Status</TableHead>
-                    <TableHead className="font-semibold text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPlatforms.map((platform) => (
-                    <TableRow key={platform.id} className="hover:bg-accent/50">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Gamepad2 className="h-5 w-5 text-primary" />
-                          </div>
-                          <div>
-                            <div className="font-medium text-foreground">
-                              {platform.name || "N/A"}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              ID: {platform.id || "N/A"}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="font-mono">
-                          {platform.code || "N/A"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm text-muted-foreground">
-                          {platform.description || "N/A"}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={platform.is_active ? "default" : "secondary"}
-                        >
-                          {platform.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Link href={`/dashboard/platforms/edit/${platform.id}`}>
-                            <Button variant="ghost" size="sm">
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Empty State */}
-      {!loading && filteredPlatforms.length === 0 && (
-        <Card>
-          <CardContent className="p-12 text-center">
+      <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t("platforms.platformDetails")}</DialogTitle>
+          </DialogHeader>
+          {detailLoading ? (
+            <div className="p-4 text-center">{t("platforms.loadingPlatformDetails")}</div>
+          ) : selectedPlatform ? (
             <div className="space-y-4">
-              <div className="h-16 w-16 rounded-full bg-accent mx-auto flex items-center justify-center">
-                <Gamepad2 className="h-8 w-8 text-muted-foreground" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <strong>UID:</strong> {selectedPlatform.uid}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5"
+                      onClick={() => {
+                        navigator.clipboard.writeText(selectedPlatform.uid)
+                        toast({ title: t("platforms.uidCopied") })
+                      }}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div><strong>{t("platforms.name")}:</strong> {selectedPlatform.name}</div>
+                  <div><strong>{t("platforms.externalId")}:</strong> {selectedPlatform.external_id}</div>
+                  <div><strong>{t("platforms.status")}:</strong> {selectedPlatform.is_active ? t("platforms.active") : t("platforms.inactive")}</div>
+                </div>
+                <div className="space-y-2">
+                  <div><strong>{t("platforms.minDeposit")}:</strong> {selectedPlatform.min_deposit_amount}</div>
+                  <div><strong>{t("platforms.maxDeposit")}:</strong> {selectedPlatform.max_deposit_amount}</div>
+                  <div><strong>{t("platforms.minimumWithdrawal")}:</strong> {selectedPlatform.min_withdrawal_amount}</div>
+                  <div><strong>{t("platforms.maximumWithdrawal")}:</strong> {selectedPlatform.max_withdrawal_amount}</div>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">No platforms found</h3>
-                <p className="text-muted-foreground">
-                  {searchTerm || statusFilter !== "all" 
-                    ? "No platforms match your search criteria."
-                    : "Start by adding your first platform."
-                  }
-                </p>
+              <div className="space-y-2">
+                <div><strong>{t("platforms.description")}:</strong> {selectedPlatform.description || t("platforms.noDescriptionProvided")}</div>
+                <div><strong>{t("platforms.createdBy")}:</strong> {selectedPlatform.created_by_name || t("platforms.unknown")}</div>
+                <div><strong>{t("platforms.createdAtLabel")}:</strong> {selectedPlatform.created_at ? formatApiDateTime(selectedPlatform.created_at) : t("platforms.unknown")}</div>
+                <div><strong>{t("platforms.updatedAt")}:</strong> {selectedPlatform.updated_at ? formatApiDateTime(selectedPlatform.updated_at) : t("platforms.unknown")}</div>
+                <div><strong>{t("platforms.activePartners")}:</strong> {selectedPlatform.active_partners_count || 0}</div>
+                <div><strong>{t("platforms.totalTransactions")}:</strong> {selectedPlatform.total_transactions_count || 0}</div>
               </div>
-              {(!searchTerm && statusFilter === "all") && (
-                <Link href="/dashboard/platforms/create">
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Platform
-                  </Button>
-                </Link>
-              )}
             </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+          ) : null}
+          <div className="flex justify-end mt-4">
+            <Button onClick={() => setDetailModalOpen(false)}>{t("common.close")}</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={statsModalOpen} onOpenChange={setStatsModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("platforms.platformStatistics")}</DialogTitle>
+          </DialogHeader>
+          {statsLoading ? (
+            <div className="p-4 text-center">{t("common.loading")}</div>
+          ) : platformStats ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div><strong>{t("platforms.totalTransactions")}:</strong> {platformStats.total_transactions}</div>
+                <div><strong>{t("platforms.successful")}:</strong> {platformStats.successful_transactions}</div>
+                <div><strong>{t("platforms.failed")}:</strong> {platformStats.failed_transactions}</div>
+                <div><strong>{t("platforms.pending")}:</strong> {platformStats.pending_transactions}</div>
+              </div>
+              <div className="space-y-2">
+                <div><strong>{t("platforms.totalVolume")}:</strong> {platformStats.total_volume}</div>
+                <div><strong>{t("platforms.totalCommissions")}:</strong> {platformStats.total_commissions}</div>
+                <div><strong>{t("platforms.activePartners")}:</strong> {platformStats.active_partners}</div>
+              </div>
+            </div>
+          ) : null}
+          <div className="flex justify-end mt-4">
+            <Button onClick={() => setStatsModalOpen(false)}>{t("common.close")}</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
+

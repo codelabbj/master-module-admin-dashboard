@@ -1,287 +1,343 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import Link from "next/link"
-import { useApi } from "@/lib/useApi"
-import { useLanguage } from "@/components/providers/language-provider"
-import { 
-  Search, 
-  ArrowUpDown, 
-  DollarSign, 
-  Filter,
-  RefreshCw
-} from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-
-const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+import { useLanguage } from "@/components/providers/language-provider"
+import { Search, ChevronLeft, ChevronRight, ArrowUpDown, MoreHorizontal, DollarSign, TrendingUp, TrendingDown } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
+import { useApi } from "@/lib/useApi"
 
 export default function CommissionPaymentsPage() {
-  const [payments, setPayments] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const apiFetch = useApi()
+  const [startDate, setStartDate] = useState("")
+  const [endDate, setEndDate] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [partners, setPartners] = useState<any[]>([])
+  const [unpaidCommissions, setUnpaidCommissions] = useState<any[]>([])
+  const [globalStats, setGlobalStats] = useState<any | null>(null)
+  const [selectedPartner, setSelectedPartner] = useState("")
+  const [paymentNotes, setPaymentNotes] = useState("")
+  const [paying, setPaying] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [statsLoading, setStatsLoading] = useState(false)
+  const [error, setError] = useState("")
   const { t } = useLanguage()
-  const { toast } = useToast();
+  const itemsPerPage = 20
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+  const { toast } = useToast()
+  const apiFetch = useApi()
 
+  // Fetch unpaid commissions by partner
   useEffect(() => {
-    const fetchPayments = async () => {
-      setLoading(true)
-      setError("")
+    const fetchUnpaidCommissions = async () => {
       try {
-        const data = await apiFetch(`${baseUrl}/api/commission-payments/`)
-        const paymentsData = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : []
-        setPayments(paymentsData)
-        toast({
-          title: t("commissionPayments.loaded") || "Commission payments loaded",
-          description: t("commissionPayments.loadedSuccessfully") || "Commission payment list loaded successfully",
-        })
+        const endpoint = `${baseUrl}/api/payments/betting/admin/commissions/unpaid_by_partner/`
+        const data = await apiFetch(endpoint)
+        let normalizedData: any[] = []
+        if (Array.isArray(data)) {
+          normalizedData = data
+        } else if (data && typeof data === 'object') {
+          normalizedData = data.results || data.data || data.items || []
+          if (!Array.isArray(normalizedData)) {
+            const arrayValue = Object.values(data).find(val => Array.isArray(val))
+            normalizedData = (arrayValue as any[]) || []
+          }
+        }
+        setUnpaidCommissions(normalizedData)
       } catch (err: any) {
-        const errorMessage = extractErrorMessages(err) || t("commissionPayments.failedToLoad") || "Failed to load commission payments"
-        setError(errorMessage)
-        toast({
-          title: t("commissionPayments.failedToLoad") || "Failed to load",
-          description: errorMessage,
-          variant: "destructive",
-        })
-      } finally {
-        setLoading(false)
+        console.error("Failed to load unpaid commissions:", err)
+        setUnpaidCommissions([])
       }
     }
+    fetchUnpaidCommissions()
+  }, [])
 
-    fetchPayments()
-  }, [searchTerm, statusFilter, apiFetch, t, toast])
-
-  const filteredPayments = useMemo(() => {
-    let filtered = payments
-
-    if (searchTerm) {
-      filtered = filtered.filter(payment =>
-        payment.partner_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        payment.config_name?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+  // Fetch global statistics
+  useEffect(() => {
+    const fetchGlobalStats = async () => {
+      setStatsLoading(true)
+      try {
+        const params = new URLSearchParams()
+        if (startDate) params.append("date_from", startDate)
+        if (endDate) params.append("date_to", endDate)
+        
+        const queryString = params.size > 0 ? `?${params.toString()}` : ""
+        const endpoint = `${baseUrl}/api/payments/betting/admin/commissions/global_stats/${queryString}`
+        const data = await apiFetch(endpoint)
+        setGlobalStats(data)
+      } catch (err: any) {
+        console.error("Failed to load global stats:", err)
+      } finally {
+        setStatsLoading(false)
+      }
     }
+    fetchGlobalStats()
+  }, [startDate, endDate])
 
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(payment => 
-        statusFilter === "paid" ? payment.status === "paid" : payment.status !== "paid"
-      )
+  // Fetch partners
+  useEffect(() => {
+    const fetchPartners = async () => {
+      try {
+        const params = new URLSearchParams({
+          page_size: "100",
+          is_active: "true"
+        })
+        const endpoint = `${baseUrl}/api/auth/admin/users/partners/?${params.toString()}`
+        const data = await apiFetch(endpoint)
+        setPartners(data.partners || [])
+      } catch (err) {
+        console.warn("Could not fetch partners:", err)
+      }
     }
+    fetchPartners()
+  }, [])
 
-    return filtered
-  }, [payments, searchTerm, statusFilter])
-
-  const handleRefresh = async () => {
-    setLoading(true)
-    setError("")
-    try {
-      const data = await apiFetch(`${baseUrl}/api/commission-payments/`)
-      const paymentsData = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : []
-      setPayments(paymentsData)
+  const handlePayCommission = async () => {
+    if (!selectedPartner) {
       toast({
-        title: t("commissionPayments.loaded") || "Commission payments refreshed",
-        description: t("commissionPayments.loadedSuccessfully") || "Commission payment list refreshed successfully",
+        title: t("commissionPayments.validationError"),
+        description: t("commissionPayments.pleaseSelectPartner"),
+        variant: "destructive",
       })
-    } catch (err: any) {
-      const errorMessage = extractErrorMessages(err) || t("commissionPayments.failedToLoad") || "Failed to load commission payments"
-      setError(errorMessage)
+      return
+    }
+
+    setPaying(true)
+    try {
+      const payload = {
+        partner_uid: selectedPartner,
+        transaction_ids: null, // Pay all
+        admin_notes: paymentNotes || "Commission payment",
+      }
+
+      await apiFetch(`${baseUrl}/api/payments/betting/admin/commissions/pay_commissions/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      
       toast({
-        title: t("commissionPayments.failedToLoad") || "Failed to load",
-        description: errorMessage,
+        title: t("commissionPayments.paymentSuccessful"),
+        description: t("commissionPayments.paymentCompletedSuccessfully"),
+      })
+      
+      // Refresh
+      const unpaidEndpoint = `${baseUrl}/api/payments/betting/admin/commissions/unpaid_by_partner/`
+      const unpaidData = await apiFetch(unpaidEndpoint)
+      let normalizedData: any[] = []
+      if (Array.isArray(unpaidData)) {
+        normalizedData = unpaidData
+      } else if (unpaidData && typeof unpaidData === 'object') {
+        normalizedData = unpaidData.results || unpaidData.data || unpaidData.items || []
+        if (!Array.isArray(normalizedData)) {
+          const arrayValue = Object.values(unpaidData).find(val => Array.isArray(val))
+          normalizedData = (arrayValue as any[]) || []
+        }
+      }
+      setUnpaidCommissions(normalizedData)
+      
+      setSelectedPartner("")
+      setPaymentNotes("")
+    } catch (err: any) {
+      toast({
+        title: t("commissionPayments.paymentFailed"),
+        description: extractErrorMessages(err),
         variant: "destructive",
       })
     } finally {
-      setLoading(false)
+      setPaying(false)
     }
   }
 
-  return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-foreground tracking-tight">
-            Commission Payments
-          </h1>
-          <p className="text-muted-foreground">
-            View commission payment records
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
-            <DollarSign className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-foreground">
-              {filteredPayments.length} payments
-            </span>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </div>
-      </div>
+  const selectedPartnerData = partners.find(p => p.uid === selectedPartner)
+  const selectedPartnerUnpaid = Array.isArray(unpaidCommissions) 
+    ? unpaidCommissions.find(u => u.partner_uid === selectedPartner)
+    : undefined
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <DollarSign className="h-5 w-5" />
+          {t("commissionPayments.paymentTitle")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-4">{t("commissionPayments.commissionStatistics")}</h3>
+          {statsLoading ? (
+            <div className="text-center py-4">{t("common.loading") || "Loading..."}</div>
+          ) : globalStats ? (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium">{t("commissionPayments.totalTransactions")}</span>
+                </div>
+                <div className="text-2xl font-bold text-blue-600">{globalStats.total_transactions}</div>
+              </div>
+              <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-green-600" />
+                   <span className="text-sm font-medium">{t("commissionPayments.totalCommission")}</span>
+                </div>
+                <div className="text-2xl font-bold text-green-600">{globalStats.total_commission}</div>
+              </div>
+              <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-orange-600" />
+                  <span className="text-sm font-medium">{t("commissionPayments.paidCommissionLabel")}</span>
+                </div>
+                <div className="text-2xl font-bold text-orange-600">{globalStats.paid_commission}</div>
+              </div>
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <TrendingDown className="h-4 w-4 text-red-600" />
+                  <span className="text-sm font-medium">{t("commissionPayments.unpaidCommissionLabel")}</span>
+                </div>
+                <div className="text-2xl font-bold text-red-600">{globalStats.unpaid_commission}</div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mb-6 p-4 bg-muted rounded-lg">
+          <h4 className="font-medium mb-3">{t("commissionPayments.filterStatisticsByDate")}</h4>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col gap-2">
+              <Label>{t("common.startDate")}</Label>
               <Input
-                placeholder="Search a payment..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-                variant="minimal"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full sm:w-48"
               />
             </div>
-
-            {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Quick Actions */}
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                Advanced filters
+            <div className="flex flex-col gap-2">
+              <Label>{t("common.endDate")}</Label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full sm:w-48"
+              />
+            </div>
+            <div className="flex items-end">
+              <Button
+                variant="outline"
+                onClick={() => { setStartDate(""); setEndDate(""); }}
+                className="h-10"
+              >
+                {t("common.clearDates")}
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Commission Payments Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-primary" />
-            Commission Payments
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="flex flex-col items-center space-y-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <span className="text-muted-foreground">Loading commission payments...</span>
-              </div>
-            </div>
-          ) : error ? (
-            <div className="p-6 text-center">
-              <ErrorDisplay error={error} />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="font-semibold">Partner</TableHead>
-                    <TableHead className="font-semibold">Config</TableHead>
-                    <TableHead className="font-semibold">Amount</TableHead>
-                    <TableHead className="font-semibold">Commission</TableHead>
-                    <TableHead className="font-semibold">Status</TableHead>
-                    <TableHead className="font-semibold text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPayments.map((payment) => (
-                    <TableRow key={payment.id} className="hover:bg-accent/50">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <DollarSign className="h-5 w-5 text-primary" />
-                          </div>
-                          <div>
-                            <div className="font-medium text-foreground">
-                              {payment.partner_name || "N/A"}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              ID: {payment.partner_id || "N/A"}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm text-muted-foreground">
-                          {payment.config_name || "N/A"}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm text-muted-foreground">
-                          ${payment.amount?.toFixed(2) || "N/A"}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm text-muted-foreground">
-                          ${payment.commission?.toFixed(2) || "N/A"}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={payment.status === "paid" ? "default" : payment.status === "pending" ? "secondary" : "destructive"}
-                        >
-                          {payment.status || "N/A"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Link href={`/dashboard/commission-payments/${payment.id}`}>
-                            <Button variant="ghost" size="sm">
-                              View
-                            </Button>
-                          </Link>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+          <h4 className="font-medium mb-3 text-blue-900 dark:text-blue-100">{t("commissionPayments.payCommissionToPartner")}</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="space-y-2">
+              <Label>{t("commissionPayments.selectPartner")}</Label>
+              <Select value={selectedPartner} onValueChange={setSelectedPartner}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("commissionPayments.choosePartnerToPay")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {partners.map((partner) => (
+                    <SelectItem key={partner.uid} value={partner.uid}>
+                      <div className="flex flex-col text-left">
+                        <span>{partner.display_name || `${partner.first_name || ""} ${partner.last_name || ""}`}</span>
+                        <span className="text-xs text-muted-foreground">{partner.email}</span>
+                      </div>
+                    </SelectItem>
                   ))}
-                </TableBody>
-              </Table>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t("commissionPayments.paymentNotes")}</Label>
+              <Input
+                value={paymentNotes}
+                onChange={(e) => setPaymentNotes(e.target.value)}
+                placeholder={t("commissionPayments.paymentNotesPlaceholder")}
+              />
+            </div>
+          </div>
+
+          {selectedPartnerData && (
+            <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded border">
+              <h5 className="font-medium mb-2">{t("commissionPayments.selectedPartnerInformation")}:</h5>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                <div><strong>{t("commissionPayments.name")}:</strong> {selectedPartnerData.display_name || `${selectedPartnerData.first_name || ""} ${selectedPartnerData.last_name || ""}`}</div>
+                <div><strong>{t("commissionPayments.email")}:</strong> {selectedPartnerData.email}</div>
+                <div><strong>{t("commissionPayments.uid")}:</strong> {selectedPartnerData.uid}</div>
+                {selectedPartnerUnpaid && (
+                  <div><strong>{t("commissionPayments.unpaidAmount")}:</strong> <span className="text-green-600 font-medium">{selectedPartnerUnpaid.total_unpaid_amount} XOF</span></div>
+                )}
+              </div>
             </div>
           )}
-        </CardContent>
-      </Card>
 
-      {/* Empty State */}
-      {!loading && filteredPayments.length === 0 && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <div className="space-y-4">
-              <div className="h-16 w-16 rounded-full bg-accent mx-auto flex items-center justify-center">
-                <DollarSign className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">No commission payments found</h3>
-                <p className="text-muted-foreground">
-                  {searchTerm || statusFilter !== "all" 
-                    ? "No commission payments match your search criteria."
-                    : "Start by processing your first commission payment."
-                  }
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+          <Button 
+            onClick={handlePayCommission}
+            disabled={!selectedPartner || paying}
+            className="flex items-center gap-2"
+          >
+            {paying ? t("commissionPayments.processingPayment") : t("commissionPayments.payCommission")}
+          </Button>
+        </div>
+
+        <div className="mb-6">
+          <h4 className="font-medium mb-3">{t("commissionPayments.unpaidCommissionsByPartner")}</h4>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("commissionPayments.partner")}</TableHead>
+                  <TableHead>{t("commissionPayments.partnerUid")}</TableHead>
+                  <TableHead>{t("commissionPayments.unsuccessfulTransactions")}</TableHead>
+                  <TableHead>{t("commissionPayments.successfulTransactions")}</TableHead>
+                  <TableHead>{t("commissionPayments.unpaidAmount")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {!Array.isArray(unpaidCommissions) || unpaidCommissions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      {t("commissionPayments.noUnpaidCommissionsFound")}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  unpaidCommissions.map((item) => (
+                    <TableRow key={item.partner_uid}>
+                      <TableCell className="font-medium">{item.partner_name}</TableCell>
+                      <TableCell><code className="text-xs">{item.partner_uid?.slice(0, 8)}...</code></TableCell>
+                      <TableCell>{item.unsuccessful_transactions_count}</TableCell>
+                      <TableCell>{item.successful_transactions_count}</TableCell>
+                      <TableCell>
+                        <Badge variant={item.total_unpaid_amount === 0 ? "secondary" : "destructive"}>
+                          {item.total_unpaid_amount} XOF
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
+

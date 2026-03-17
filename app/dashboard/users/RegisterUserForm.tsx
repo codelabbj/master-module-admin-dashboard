@@ -23,6 +23,10 @@ export default function RegisterUserForm() {
     password_confirm: "",
     is_partner: false,
     can_process_ussd_transaction: false,
+    is_aggregator: false,
+    can_process_momo: true,
+    can_process_mobcash: true,
+    can_process_bulk_payment: true,
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -77,8 +81,12 @@ export default function RegisterUserForm() {
         password_confirm: form.password_confirm,
         is_partner: form.is_partner,
         can_process_ussd_transaction: form.can_process_ussd_transaction,
+        is_aggregator: form.is_aggregator,
+        can_process_momo: form.can_process_momo,
+        can_process_mobcash: form.can_process_mobcash,
+        can_process_bulk_payment: form.can_process_bulk_payment,
       }
-      const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/auth/register/`, {
+      const data = await apiFetch(`${baseUrl}/api/auth/register/`, {
         method: "POST",
         headers,
         body: JSON.stringify(submitBody),
@@ -105,6 +113,10 @@ export default function RegisterUserForm() {
           password_confirm: "",
           is_partner: false,
           can_process_ussd_transaction: false,
+          is_aggregator: false,
+          can_process_momo: true,
+          can_process_mobcash: true,
+          can_process_bulk_payment: true,
         })
       }
     } catch (err: any) {
@@ -375,6 +387,74 @@ export default function RegisterUserForm() {
                 name="can_process_ussd_transaction"
                 checked={form.can_process_ussd_transaction}
                 onCheckedChange={(checked) => setForm({ ...form, can_process_ussd_transaction: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-accent/30 rounded-lg">
+              <div className="space-y-1">
+                <Label htmlFor="is_aggregator" className="text-sm font-medium text-foreground">
+                  {t("users.isAggregator") || "Agrégateur"}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Désigner cet utilisateur comme agrégateur
+                </p>
+              </div>
+              <Switch
+                id="is_aggregator"
+                name="is_aggregator"
+                checked={form.is_aggregator}
+                onCheckedChange={(checked) => setForm({ ...form, is_aggregator: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-accent/30 rounded-lg">
+              <div className="space-y-1">
+                <Label htmlFor="can_process_momo" className="text-sm font-medium text-foreground">
+                  {t("users.canProcessMomo") || "MoMo"}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Autoriser les transactions MoMo
+                </p>
+              </div>
+              <Switch
+                id="can_process_momo"
+                name="can_process_momo"
+                checked={form.can_process_momo}
+                onCheckedChange={(checked) => setForm({ ...form, can_process_momo: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-accent/30 rounded-lg">
+              <div className="space-y-1">
+                <Label htmlFor="can_process_mobcash" className="text-sm font-medium text-foreground">
+                  {t("users.canProcessMobcash") || "MobCash"}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Autoriser les transactions MobCash
+                </p>
+              </div>
+              <Switch
+                id="can_process_mobcash"
+                name="can_process_mobcash"
+                checked={form.can_process_mobcash}
+                onCheckedChange={(checked) => setForm({ ...form, can_process_mobcash: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-accent/30 rounded-lg">
+              <div className="space-y-1">
+                <Label htmlFor="can_process_bulk_payment" className="text-sm font-medium text-foreground">
+                  {t("users.canProcessBulkPayment") || "Paiement en masse"}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Autoriser les paiements en masse
+                </p>
+              </div>
+              <Switch
+                id="can_process_bulk_payment"
+                name="can_process_bulk_payment"
+                checked={form.can_process_bulk_payment}
+                onCheckedChange={(checked) => setForm({ ...form, can_process_bulk_payment: checked })}
               />
             </div>
           </CardContent>

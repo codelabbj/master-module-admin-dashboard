@@ -127,7 +127,7 @@ export default function WaveBusinessTransactionPage() {
         params.append("status", statusFilter)
       }
 
-      const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/wave-business-transactions/?${params.toString()}`
+      const endpoint = `${baseUrl}/api/payments/wave-business-transactions/?${params.toString()}`
       const data = await apiFetch(endpoint)
 
       if (data.results) {
@@ -197,7 +197,7 @@ export default function WaveBusinessTransactionPage() {
     setDetailError("")
     setDetailTransaction(null)
     try {
-      const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/wave-business-transactions/${uid}/`
+      const endpoint = `${baseUrl}/api/payments/wave-business-transactions/${uid}/`
       const data = await apiFetch(endpoint)
       setDetailTransaction(data)
       toast({

@@ -143,7 +143,7 @@ export function Sidebar({ open: sidebarOpen, setOpen: setSidebarOpen }: SidebarP
               </div>
               <div>
                 <h1 className="text-lg font-semibold text-foreground">{appName}</h1>
-                <p className="text-xs text-muted-foreground">Admin Dashboard</p>
+                <p className="text-xs text-muted-foreground">{t("nav.adminDashboard")}</p>
               </div>
             </div>
             <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
@@ -180,7 +180,7 @@ export function Sidebar({ open: sidebarOpen, setOpen: setSidebarOpen }: SidebarP
               </div>
               <div>
                 <h1 className="text-lg font-semibold text-foreground">{appName}</h1>
-                <p className="text-xs text-muted-foreground">Admin Dashboard</p>
+                <p className="text-xs text-muted-foreground">{t("nav.adminDashboard")}</p>
               </div>
             </div>
           </div>

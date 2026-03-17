@@ -53,7 +53,7 @@ export default function NetworkConfigCreatePage() {
   useEffect(() => {
     const fetchNetworks = async () => {
       try {
-        const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/networks/`)
+        const data = await apiFetch(`${baseUrl}/api/payments/networks/`)
         setNetworks(Array.isArray(data) ? data : data.results || [])
         toast({
           title: t("networkConfig.networksLoaded"),
@@ -101,7 +101,7 @@ export default function NetworkConfigCreatePage() {
         }
       }
       
-      await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/network-configs/`, {
+      await apiFetch(`${baseUrl}/api/payments/network-configs/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

@@ -20,6 +20,7 @@ export default function PasswordResetModal({ open, onOpenChange, initialIdentifi
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [taskId, setTaskId] = useState("");
 
   // Simulate API call
@@ -217,12 +218,20 @@ export default function PasswordResetModal({ open, onOpenChange, initialIdentifi
                   </div>
                   <Input
                     placeholder="Enter your new password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     value={newPassword}
                     onChange={e => setNewPassword(e.target.value)}
                     required
-                    className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                    className="pl-10 pr-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
                   />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
               </div>
 

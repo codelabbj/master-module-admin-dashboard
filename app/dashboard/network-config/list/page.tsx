@@ -57,13 +57,13 @@ export default function NetworkConfigListPage() {
           }
           // Keep '+' literal for ordering (avoid %2B)
           const query = params.toString().replace(/ordering=%2B/g, "ordering=+");
-          endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/network-configs/?${query}`;
+          endpoint = `${baseUrl}/api/payments/network-configs/?${query}`;
         } else {
           const params = new URLSearchParams({
             page: "1",
             page_size: "100",
           });
-          endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/network-configs/?${params.toString()}`;
+          endpoint = `${baseUrl}/api/payments/network-configs/?${params.toString()}`;
         }
         const data = await apiFetch(endpoint)
         setConfigs(Array.isArray(data) ? data : data.results || [])
@@ -92,7 +92,7 @@ export default function NetworkConfigListPage() {
   useEffect(() => {
     const fetchNetworks = async () => {
       try {
-        const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/networks/`)
+        const data = await apiFetch(`${baseUrl}/api/payments/networks/`)
         setNetworks(Array.isArray(data) ? data : data.results || [])
         toast({
           title: t("networkConfig.networksLoaded"),

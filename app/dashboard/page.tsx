@@ -40,8 +40,13 @@ import {
   DollarSign as DollarIcon,
   PieChart,
   LineChart,
-  TrendingDown
+  TrendingDown,
+  Share2,
+  ClipboardList,
+  KeyRound,
+  ServerCrash
 } from "lucide-react"
+import { AggregatorDashboard } from "@/lib/aggregator-api"
 import { ErrorDisplay } from "@/components/ui/error-display"
 import { CONFIG } from "@/lib/config"
 import {
@@ -183,6 +188,16 @@ interface RechargeRequestStats {
   }
 }
 
+interface AutoRechargeStats {
+  total_transactions: number
+  total_amount: string
+  total_fees: string
+  success_rate: string
+  completed_transactions: number
+  pending_transactions: number
+  failed_transactions: number
+}
+
 interface MomoPayStats {
   total_transactions: number
   pending_count: number
@@ -233,6 +248,8 @@ export default function Dashboard() {
   const [rechargeRequests, setRechargeRequests] = useState<RechargeRequestStats | null>(null)
   const [momoPayStats, setMomoPayStats] = useState<MomoPayStats | null>(null)
   const [waveBusinessStats, setWaveBusinessStats] = useState<WaveBusinessStats | null>(null)
+  const [autoRechargeStats, setAutoRechargeStats] = useState<AutoRechargeStats | null>(null)
+  const [aggregatorStats, setAggregatorStats] = useState<AggregatorDashboard | null>(null)
 
   // Helper function to add timeout to API calls
   const apiWithTimeout = async (url: string, timeoutMs: number = 10000) => {
@@ -280,7 +297,9 @@ export default function Dashboard() {
         balanceOperationsRes,
         rechargeRequestsRes,
         momoPayRes,
-        waveBusinessRes
+        waveBusinessRes,
+        autoRechargeRes,
+        aggregatorRes
       ] = await Promise.allSettled([
         apiWithRetry(`${CONFIG.API_BASE_URL}/api/payments/dashboard/summary/`),
         apiWithRetry(`${CONFIG.API_BASE_URL}/api/auth/admin/notifications/stats/`),
@@ -289,7 +308,9 @@ export default function Dashboard() {
         apiWithRetry(`${CONFIG.API_BASE_URL}/api/payments/admin/balance-operations/stats/`),
         apiWithRetry(`${CONFIG.API_BASE_URL}/api/payments/user/recharge_requests/stats/`),
         apiWithRetry(`${CONFIG.API_BASE_URL}/api/payments/momo-pay-transactions/stats/`),
-        apiWithRetry(`${CONFIG.API_BASE_URL}/api/payments/wave-business-transactions/stats/`)
+        apiWithRetry(`${CONFIG.API_BASE_URL}/api/payments/wave-business-transactions/stats/`),
+        apiWithRetry(`${CONFIG.API_BASE_URL}/api/auto-recharge/admin/statistics/`),
+        apiWithRetry(`${CONFIG.API_BASE_URL}/api/aggregator/admin/dashboard/`)
       ])
 
       // Process results
@@ -325,11 +346,20 @@ export default function Dashboard() {
         console.log('Wave Business stats loaded:', waveBusinessRes.value)
         setWaveBusinessStats(waveBusinessRes.value)
       }
+      if (autoRechargeRes.status === 'fulfilled' && autoRechargeRes.value) {
+        console.log('Auto Recharge stats loaded:', autoRechargeRes.value)
+        setAutoRechargeStats(autoRechargeRes.value)
+      }
+      if (aggregatorRes.status === 'fulfilled' && aggregatorRes.value) {
+        console.log('Aggregator stats loaded:', aggregatorRes.value)
+        setAggregatorStats(aggregatorRes.value)
+      }
 
       // Check for any failures
       const failures = [
         summaryRes, notificationRes, transactionRes, systemEventsRes,
-        balanceOperationsRes, rechargeRequestsRes, momoPayRes, waveBusinessRes
+        balanceOperationsRes, rechargeRequestsRes, momoPayRes, waveBusinessRes,
+        autoRechargeRes, aggregatorRes
       ].filter(result => result.status === 'rejected')
 
       if (failures.length > 0) {
@@ -350,7 +380,7 @@ export default function Dashboard() {
         }
 
         // If all API calls failed, show demo data
-        if (failures.length === 8) {
+        if (failures.length === 10) {
           console.log('All API calls failed, showing demo data')
           setError('Impossible de se connecter à l\'API. Affichage des données de démonstration.')
           setDashboardSummary({
