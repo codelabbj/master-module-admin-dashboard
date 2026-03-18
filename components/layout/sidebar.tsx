@@ -65,17 +65,21 @@ export function Sidebar({ open: sidebarOpen, setOpen: setSidebarOpen }: SidebarP
     })),
   }))
 
-  const NavItem = ({ item }: { item: any }) => {
+  const renderNavItem = (item: any) => {
     const isExpanded = expandedItems.includes(item.name)
     const hasChildren = item.children && item.children.length > 0
 
     if (hasChildren) {
       return (
-        <div className="space-y-1">
+        <div key={item.name} className="space-y-1">
           <button
-            onClick={() => toggleExpanded(item.name)}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              toggleExpanded(item.name);
+            }}
             className={cn(
-              "minimal-nav-item w-full justify-between",
+              "minimal-nav-item w-full justify-between focus:outline-none",
               item.current && "minimal-nav-item-active"
             )}
           >
@@ -100,6 +104,7 @@ export function Sidebar({ open: sidebarOpen, setOpen: setSidebarOpen }: SidebarP
                 <Link
                   key={child.href}
                   href={child.href}
+                  prefetch={false}
                   className={cn(
                     "minimal-nav-item text-sm",
                     pathname === child.href && "minimal-nav-item-active"
@@ -117,7 +122,9 @@ export function Sidebar({ open: sidebarOpen, setOpen: setSidebarOpen }: SidebarP
 
     return (
       <Link
+        key={item.href}
         href={item.href}
+        prefetch={false}
         className={cn(
           "minimal-nav-item",
           item.current && "minimal-nav-item-active"
@@ -152,9 +159,7 @@ export function Sidebar({ open: sidebarOpen, setOpen: setSidebarOpen }: SidebarP
           </div>
 
           <nav className="flex-1 min-h-0 space-y-2 p-4 overflow-y-auto">
-            {filteredNavigationItems.map((item) => (
-              <NavItem key={item.name} item={item} />
-            ))}
+            {filteredNavigationItems.map((item) => renderNavItem(item))}
           </nav>
 
           <div className="flex-shrink-0 p-4 border-t border-border/50">
@@ -186,9 +191,7 @@ export function Sidebar({ open: sidebarOpen, setOpen: setSidebarOpen }: SidebarP
           </div>
 
           <nav className="flex-1 min-h-0 space-y-2 p-4 overflow-y-auto">
-            {filteredNavigationItems.map((item) => (
-              <NavItem key={item.name} item={item} />
-            ))}
+            {filteredNavigationItems.map((item) => renderNavItem(item))}
           </nav>
 
           <div className="flex-shrink-0 p-4 border-t border-border/50">
