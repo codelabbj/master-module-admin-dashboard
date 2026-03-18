@@ -15,6 +15,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
 import { useApi } from "@/lib/useApi"
 import Link from "next/link"
+import { getImageUrl } from "@/lib/utils"
+import { Gamepad2 } from "lucide-react"
 
 import { formatApiDateTime } from "@/lib/utils";
 
@@ -283,6 +285,7 @@ export default function PlatformListPage() {
                         <ArrowUpDown className="ml-2 h-4 w-4" />
                       </Button>
                     </TableHead>
+                    <TableHead>{t("platforms.logo") || "Logo"}</TableHead>
                     <TableHead>{t("platforms.externalId")}</TableHead>
                     <TableHead>{t("platforms.status")}</TableHead>
                     <TableHead>{t("platforms.minDeposit")}</TableHead>
@@ -319,6 +322,29 @@ export default function PlatformListPage() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{platform.name}</TableCell>
+                      <TableCell>
+                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/5">
+                          {platform.logo ? (
+                            <img 
+                              src={getImageUrl(platform.logo) || ""} 
+                              alt={platform.name} 
+                              className="h-full w-full object-contain p-1" 
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const parent = e.currentTarget.parentElement;
+                                if (parent) {
+                                  const fallback = document.createElement('div');
+                                  fallback.className = "flex items-center justify-center w-full h-full bg-primary/10 text-primary font-bold text-xs";
+                                  fallback.innerText = platform.name ? platform.name[0].toUpperCase() : "P";
+                                  parent.appendChild(fallback);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <Gamepad2 className="h-5 w-5 text-primary opacity-40" />
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>{platform.external_id}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -427,6 +453,33 @@ export default function PlatformListPage() {
             <div className="p-4 text-center">{t("platforms.loadingPlatformDetails")}</div>
           ) : selectedPlatform ? (
             <div className="space-y-4">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="h-20 w-20 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/10">
+                  {selectedPlatform.logo ? (
+                    <img 
+                      src={getImageUrl(selectedPlatform.logo) || ""} 
+                      alt={selectedPlatform.name} 
+                      className="h-full w-full object-contain p-2"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const parent = e.currentTarget.parentElement;
+                        if (parent) {
+                          const fallback = document.createElement('div');
+                          fallback.className = "flex items-center justify-center w-full h-full bg-primary/10 text-primary font-bold text-2xl";
+                          fallback.innerText = selectedPlatform.name ? selectedPlatform.name[0].toUpperCase() : "P";
+                          parent.appendChild(fallback);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <Gamepad2 className="h-10 w-10 text-primary opacity-40" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">{selectedPlatform.name}</h3>
+                  <p className="text-sm text-muted-foreground">{selectedPlatform.code || selectedPlatform.external_id}</p>
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">

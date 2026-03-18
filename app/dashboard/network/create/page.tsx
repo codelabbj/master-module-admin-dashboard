@@ -27,6 +27,7 @@ export default function NetworkCreatePage() {
   const [countries, setCountries] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [logoFile, setLogoFile] = useState<File | null>(null)
   const apiFetch = useApi()
   const { t } = useLanguage()
   const { toast } = useToast();
@@ -49,10 +50,23 @@ export default function NetworkCreatePage() {
     setLoading(true)
     setError("")
     try {
-      await apiFetch(`${baseUrl}/api/payments/networks/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+      let body
+      const headers: Record<string, string> = {}
+      
+      if (logoFile) {
+        const formData = new FormData()
+        formData.append("nom", nom)
+        formData.append("code", code)
+        formData.append("country", country)
+        formData.append("ussd_base_code", ussdBaseCode)
+        formData.append("is_active", String(isActive))
+        formData.append("sent_deposit_to_module", String(sentDepositToModule))
+        formData.append("sent_withdrawal_to_module", String(sentWithdrawalToModule))
+        formData.append("image", logoFile)
+        body = formData
+        // Note: Do NOT set "Content-Type" manually when using FormData
+      } else {
+        body = JSON.stringify({ 
           nom, 
           code, 
           country, 
@@ -61,6 +75,13 @@ export default function NetworkCreatePage() {
           sent_deposit_to_module: sentDepositToModule,
           sent_withdrawal_to_module: sentWithdrawalToModule
         })
+        headers["Content-Type"] = "application/json"
+      }
+
+      await apiFetch(`${baseUrl}/api/payments/networks/`, {
+        method: "POST",
+        headers,
+        body
       })
       toast({
         title: t("network.created") || "Réseau créé",
@@ -159,6 +180,32 @@ export default function NetworkCreatePage() {
                   onChange={(e) => setUssdBaseCode(e.target.value)}
                   placeholder="ex: *123#"
                 />
+              </div>
+              <div className="md:col-span-2">
+                <Label htmlFor="logo">Logo du réseau</Label>
+                <div className="mt-2 flex items-center gap-4">
+                  {logoFile && (
+                    <div className="relative h-24 w-24 border rounded-lg overflow-hidden bg-muted">
+                      <img 
+                        src={URL.createObjectURL(logoFile)} 
+                        alt="Preview" 
+                        className="h-full w-full object-contain"
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <Input
+                      id="logo"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                      className="cursor-pointer"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Privilégiez une image carrée (PNG ou JPG)
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>

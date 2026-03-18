@@ -9,7 +9,7 @@ import { useApi } from "@/lib/useApi"
 import { useLanguage } from "@/components/providers/language-provider"
 import { useToast } from "@/hooks/use-toast"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
-import { ArrowLeft, Save, Loader2, Gamepad2, CheckCircle, Plus } from "lucide-react"
+import { ArrowLeft, Save, Loader2, Gamepad2, CheckCircle, Plus, Image as ImageIcon } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
@@ -23,6 +23,7 @@ export default function PlatformCreatePage() {
   const [isActive, setIsActive] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [logoFile, setLogoFile] = useState<File | null>(null)
   const router = useRouter()
   const apiFetch = useApi()
   const { t } = useLanguage()
@@ -33,10 +34,26 @@ export default function PlatformCreatePage() {
     setLoading(true)
     setError("")
     try {
+      let body
+      const headers: Record<string, string> = {}
+      
+      if (logoFile) {
+        const formData = new FormData()
+        formData.append("name", name)
+        formData.append("code", code)
+        formData.append("description", description)
+        formData.append("is_active", String(isActive))
+        formData.append("logo", logoFile)
+        body = formData
+      } else {
+        body = JSON.stringify({ name, code, description, is_active: isActive })
+        headers["Content-Type"] = "application/json"
+      }
+
       await apiFetch(`${baseUrl}/api/platforms/`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, code, description, is_active: isActive })
+        headers,
+        body
       })
       toast({
         title: t("platforms.created"),
@@ -172,10 +189,48 @@ export default function PlatformCreatePage() {
                 </p>
               </div>
               <Switch
-                id="isActive"
-                checked={isActive}
                 onCheckedChange={setIsActive}
               />
+            </div>
+            
+            <div className="space-y-4 pt-4 border-t border-border/50">
+              <Label htmlFor="logo" className="text-sm font-medium text-foreground">
+                Platform Logo
+              </Label>
+              <div className="flex items-center gap-6">
+                <div className="relative h-28 w-28 rounded-xl border-2 border-dashed border-muted-foreground/20 bg-muted/30 flex items-center justify-center overflow-hidden transition-all hover:border-primary/50">
+                  {logoFile ? (
+                    <img 
+                      src={URL.createObjectURL(logoFile)} 
+                      alt="Logo preview" 
+                      className="h-full w-full object-contain p-2"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <ImageIcon className="h-8 w-8 opacity-20" />
+                      <span className="text-[10px] font-medium uppercase tracking-wider">No Image</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 space-y-3">
+                  <Input
+                    id="logo"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                    className="minimal-input h-10 cursor-pointer"
+                    variant="minimal"
+                  />
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">
+                      PNG, JPG or SVG formats accepted. Max size 2MB.
+                    </p>
+                    <p className="text-xs font-medium text-primary/70">
+                      Recommendation: 512x512px with transparent background.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -191,8 +246,16 @@ export default function PlatformCreatePage() {
             </CardHeader>
             <CardContent className="p-6">
               <div className="flex items-center gap-4 p-4 bg-accent/20 rounded-lg">
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Gamepad2 className="h-6 w-6 text-primary" />
+                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20">
+                  {logoFile ? (
+                    <img 
+                      src={URL.createObjectURL(logoFile)} 
+                      alt="Logo preview" 
+                      className="h-full w-full object-contain p-1"
+                    />
+                  ) : (
+                    <Gamepad2 className="h-6 w-6 text-primary" />
+                  )}
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-foreground">

@@ -23,6 +23,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
 import { Badge } from "@/components/ui/badge"
+import { getImageUrl } from "@/lib/utils"
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
@@ -195,11 +196,25 @@ export default function NetworkListPage() {
                     <TableRow key={network.id || network.uid} className="hover:bg-accent/50">
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-                            {network.logo ? (
-                              <img src={network.logo} alt={network.nom} className="h-full w-full object-cover" />
+                          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/5">
+                            {(network.image || network.logo) ? (
+                              <img 
+                                src={getImageUrl(network.image || network.logo) || ""} 
+                                alt={network.nom} 
+                                className="h-full w-full object-contain p-1" 
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  const parent = e.currentTarget.parentElement;
+                                  if (parent) {
+                                    const fallback = document.createElement('div');
+                                    fallback.className = "flex items-center justify-center w-full h-full bg-primary/10 text-primary font-bold text-xs";
+                                    fallback.innerText = network.nom ? network.nom[0].toUpperCase() : "N";
+                                    parent.appendChild(fallback);
+                                  }
+                                }}
+                              />
                             ) : (
-                              <Smartphone className="h-5 w-5 text-primary" />
+                              <Smartphone className="h-5 w-5 text-primary opacity-40" />
                             )}
                           </div>
                           <div>

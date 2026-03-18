@@ -12,6 +12,8 @@ import { useApi } from "@/lib/useApi"
 import { useLanguage } from "@/components/providers/language-provider"
 import { useToast } from "@/hooks/use-toast"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
+import { Image as ImageIcon } from "lucide-react"
+import { getImageUrl } from "@/lib/utils"
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
@@ -35,6 +37,8 @@ export default function PlatformEditPage() {
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(true)
   const [error, setError] = useState("")
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [existingLogo, setExistingLogo] = useState<string | null>(null)
 
   // Fetch platform details
   useEffect(() => {
@@ -55,6 +59,7 @@ export default function PlatformEditPage() {
         setMaxWithdrawalAmount(data.max_withdrawal_amount?.toString() || "")
         setDescription(data.description || "")
         setIsActive(data.is_active ?? true)
+        setExistingLogo(data.logo || null)
         // GET requests don't show success toasts automatically
       } catch (err: any) {
         const errorMessage = extractErrorMessages(err)
@@ -88,10 +93,29 @@ export default function PlatformEditPage() {
         is_active: isActive,
       }
 
+      let body
+      const headers: Record<string, string> = {}
+      
+      if (logoFile) {
+        const formData = new FormData()
+        formData.append("name", name.trim())
+        formData.append("min_deposit_amount", String(parseFloat(minDepositAmount) || 0))
+        formData.append("max_deposit_amount", String(parseFloat(maxDepositAmount) || 0))
+        formData.append("min_withdrawal_amount", String(parseFloat(minWithdrawalAmount) || 0))
+        formData.append("max_withdrawal_amount", String(parseFloat(maxWithdrawalAmount) || 0))
+        formData.append("description", description.trim())
+        formData.append("is_active", String(isActive))
+        formData.append("logo", logoFile)
+        body = formData
+      } else {
+        body = JSON.stringify(payload)
+        headers["Content-Type"] = "application/json"
+      }
+
       await apiFetch(`${baseUrl}/api/payments/betting/admin/platforms/${uid}/`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        headers,
+        body
       })
       // Success toast is automatically shown by useApi hook for non-GET requests
       
@@ -226,6 +250,51 @@ export default function PlatformEditPage() {
               placeholder={t("platforms.descriptionPlaceholder")}
               rows={3}
             />
+          </div>
+
+          {/* Platform Logo */}
+          <div className="space-y-4">
+            <Label htmlFor="logo" className="text-sm font-medium text-foreground">
+              {t("platforms.logo") || "Platform Logo"}
+            </Label>
+            <div className="flex items-center gap-6">
+              <div className="relative h-28 w-28 rounded-xl border-2 border-dashed border-muted-foreground/20 bg-muted/30 flex items-center justify-center overflow-hidden transition-all hover:border-primary/50">
+                {(logoFile || existingLogo) ? (
+                  <img 
+                    src={logoFile ? URL.createObjectURL(logoFile) : getImageUrl(existingLogo) || ""} 
+                    alt="Logo preview" 
+                    className="h-full w-full object-contain p-2"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      const parent = e.currentTarget.parentElement;
+                      if (parent) {
+                        const fallback = document.createElement('div');
+                        fallback.className = "flex items-center justify-center w-full h-full bg-primary/10 text-primary font-bold text-xl";
+                        fallback.innerText = name ? name[0].toUpperCase() : "P";
+                        parent.appendChild(fallback);
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <ImageIcon className="h-8 w-8 opacity-20" />
+                    <span className="text-[10px] font-medium uppercase tracking-wider">No Image</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 space-y-3">
+                <Input
+                  id="logo"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                  className="minimal-input h-10 cursor-pointer"
+                />
+                <p className="text-xs text-muted-foreground">
+                  PNG, JPG or SVG formats accepted. Selectionnera une nouvelle image remplacera l'actuelle.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Status */}

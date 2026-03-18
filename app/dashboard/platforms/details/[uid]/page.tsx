@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from "@/components/ui/dialog"
-import { Copy, Edit, ArrowLeft, BarChart3, Users, CreditCard, TrendingUp, TrendingDown } from "lucide-react"
+import { Copy, Edit, ArrowLeft, BarChart3, Users, CreditCard, TrendingUp, TrendingDown, Gamepad2 } from "lucide-react"
+import { getImageUrl } from "@/lib/utils"
 import { useApi } from "@/lib/useApi"
 import { useLanguage } from "@/components/providers/language-provider"
 import { useToast } from "@/hooks/use-toast"
@@ -147,6 +148,27 @@ export default function PlatformDetailsPage() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             {t("platforms.backToPlatforms")}
           </Button>
+          <div className="h-16 w-16 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/10">
+            {platform.logo ? (
+              <img 
+                src={getImageUrl(platform.logo) || ""} 
+                alt={platform.name} 
+                className="h-full w-full object-contain p-2"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const parent = e.currentTarget.parentElement;
+                  if (parent) {
+                    const fallback = document.createElement('div');
+                    fallback.className = "flex items-center justify-center w-full h-full bg-primary/10 text-primary font-bold text-2xl";
+                    fallback.innerText = platform.name ? platform.name[0].toUpperCase() : "P";
+                    parent.appendChild(fallback);
+                  }
+                }}
+              />
+            ) : (
+              <Gamepad2 className="h-8 w-8 text-primary opacity-40" />
+            )}
+          </div>
           <div>
             <h1 className="text-2xl font-bold">{platform.name}</h1>
             <p className="text-muted-foreground">{t("platforms.platformDetailsTitle")}</p>
