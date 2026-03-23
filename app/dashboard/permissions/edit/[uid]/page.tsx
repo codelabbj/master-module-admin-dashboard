@@ -46,7 +46,7 @@ export default function PermissionEditPage() {
         const params = new URLSearchParams({
           page_size: "1000"
         })
-        const endpoint = `${baseUrl}/api/payments/betting/admin/permissions/?${params.toString()}`
+        const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/betting/admin/permissions/?${params.toString()}`
         const data = await apiFetch(endpoint)
         
         const permission = data.results.find((p: any) => p.uid === uid)
@@ -105,7 +105,7 @@ export default function PermissionEditPage() {
         is_active: isActive,
       }
 
-      await apiFetch(`${baseUrl}/api/payments/betting/admin/permissions/${uid}/`, {
+      await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/betting/admin/permissions/${uid}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

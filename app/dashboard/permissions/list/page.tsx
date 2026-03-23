@@ -18,7 +18,6 @@ import { useApi } from "@/lib/useApi"
 import Link from "next/link"
 
 import { formatApiDateTime } from "@/lib/utils";
-
 export default function PermissionListPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [platformFilter, setPlatformFilter] = useState("all")
@@ -98,7 +97,7 @@ export default function PermissionListPage() {
           params.append("ordering", ordering)
         }
 
-        const endpoint = `${baseUrl}/api/payments/betting/admin/permissions/?${params.toString()}`
+        const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/betting/admin/permissions/?${params.toString()}`
         const data = await apiFetch(endpoint)
         
         setPermissions(data.results || [])
@@ -135,7 +134,7 @@ export default function PermissionListPage() {
           page_size: "100",
           is_active: "true"
         })
-        const endpoint = `${baseUrl}/api/payments/betting/admin/platforms/?${params.toString()}`
+        const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/betting/admin/platforms/?${params.toString()}`
         const data = await apiFetch(endpoint)
         setPlatforms(data.results || [])
       } catch (err) {
@@ -154,7 +153,7 @@ export default function PermissionListPage() {
     }
   }
 
-  // Details
+  // Fetch permission details (same as the data in the list)
   const handleOpenDetail = (permission: any) => {
     setDetailModalOpen(true)
     setSelectedPermission(permission)
@@ -170,12 +169,13 @@ export default function PermissionListPage() {
         is_active: !permission.is_active,
       }
 
-      const data = await apiFetch(`${baseUrl}/api/payments/betting/admin/permissions/${permission.uid}/`, {
+      const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/betting/admin/permissions/${permission.uid}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
       
+      // Update the permission in the list
       setPermissions(prev => prev.map(p => 
         p.uid === permission.uid 
           ? { ...p, is_active: data.is_active }
@@ -229,6 +229,7 @@ export default function PermissionListPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Search and Filter Controls */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -277,6 +278,7 @@ export default function PermissionListPage() {
             </Select>
           </div>
 
+          {/* Date Filters */}
           <div className="flex flex-col lg:flex-row gap-4 mb-6">
             <div className="flex flex-col lg:flex-row gap-4 flex-1">
               <div className="flex flex-col gap-2">
@@ -323,6 +325,7 @@ export default function PermissionListPage() {
             </div>
           </div>
 
+          {/* Table */}
           <div className="rounded-md border">
             {loading ? (
               <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>
@@ -472,6 +475,7 @@ export default function PermissionListPage() {
             )}
           </div>
 
+          {/* Pagination */}
           <div className="flex items-center justify-between mt-6">
             <div className="text-sm text-muted-foreground">
               {t("common.showing")}: {startIndex + 1}-{Math.min(startIndex + itemsPerPage, totalCount)} {t("common.of")} {totalCount}
@@ -503,6 +507,7 @@ export default function PermissionListPage() {
         </CardContent>
       </Card>
 
+      {/* Permission Details Modal */}
       <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -568,4 +573,3 @@ export default function PermissionListPage() {
     </>
   )
 }
-
