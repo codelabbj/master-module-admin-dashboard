@@ -194,13 +194,14 @@ export default function BettingTransactionsPage() {
     }
   }
 
-  const handleProcessCancellation = async () => {
+  const handleProcessCancellation = async (success: boolean) => {
     if (!selectedTransaction) return
     
     setProcessingCancellation(true)
     try {
       const payload = {
-        admin_notes: cancellationNotes || "Cancellation approved by admin"
+        success: success,
+        admin_notes: cancellationNotes || (success ? "Cancellation approved by admin" : "Cancellation rejected by admin")
       }
       
       await apiFetch(`${baseUrl}/api/payments/betting/admin/transactions/${selectedTransaction.uid}/process_cancellation/`, {
@@ -209,6 +210,11 @@ export default function BettingTransactionsPage() {
         body: JSON.stringify(payload),
       })
       
+      toast({
+        title: t("bettingTransactions.cancellationProcessed"),
+        description: success ? t("bettingTransactions.cancellationProcessedSuccessfully") : t("bettingTransactions.cancellationRejectedSuccessfully"),
+      })
+
       setCancellationModalOpen(false)
       setCancellationNotes("")
       window.location.reload()
@@ -436,29 +442,45 @@ export default function BettingTransactionsPage() {
                       <TableCell><code className="text-xs">{transaction.betting_user_id || "-"}</code></TableCell>
                       <TableCell>{formatApiDateTime(transaction.created_at)}</TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
+                        <div className="flex items-center gap-2">
+                          {transaction.status === "cancellation_requested" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-orange-600 border-orange-200 hover:bg-orange-50 h-8 gap-1 px-2"
+                              onClick={() => {
+                                setSelectedTransaction(transaction)
+                                setCancellationModalOpen(true)
+                              }}
+                            >
+                              <AlertTriangle className="h-3.5 w-3.5" />
+                              <span className="text-xs">{t("bettingTransactions.process") || "Process"}</span>
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleOpenDetail(transaction)}>
-                              {t("bettingTransactions.viewDetails")}
-                            </DropdownMenuItem>
-                            {transaction.status === "cancellation_requested" && (
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedTransaction(transaction)
-                                  setCancellationModalOpen(true)
-                                }}
-                                className="text-orange-600"
-                              >
-                                {t("bettingTransactions.processCancellation")}
+                          )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleOpenDetail(transaction)}>
+                                {t("bettingTransactions.viewDetails")}
                               </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              {transaction.status === "cancellation_requested" && (
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setSelectedTransaction(transaction)
+                                    setCancellationModalOpen(true)
+                                  }}
+                                  className="text-orange-600"
+                                >
+                                  {t("bettingTransactions.processCancellation")}
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -594,13 +616,20 @@ export default function BettingTransactionsPage() {
           
           <AlertDialogFooter>
             <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleProcessCancellation}
+            <Button
+              variant="destructive"
+              onClick={() => handleProcessCancellation(false)}
               disabled={processingCancellation}
-              className="bg-red-600 hover:bg-red-700"
+            >
+              {processingCancellation ? t("bettingTransactions.processing") : t("bettingTransactions.rejectCancellation")}
+            </Button>
+            <Button
+              onClick={() => handleProcessCancellation(true)}
+              disabled={processingCancellation}
+              className="bg-green-600 hover:bg-green-700"
             >
               {processingCancellation ? t("bettingTransactions.processing") : t("bettingTransactions.approveCancellation")}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

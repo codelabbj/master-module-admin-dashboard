@@ -1476,9 +1476,11 @@ const translations = {
     "bettingTransactions.cancellationNotesPlaceholder": "Add notes about the cancellation approval...",
     "bettingTransactions.transactionInformation": "Transaction Information",
     "bettingTransactions.approveCancellation": "Approve Cancellation",
+    "bettingTransactions.rejectCancellation": "Reject Cancellation",
     "bettingTransactions.processing": "Processing...",
     "bettingTransactions.cancellationProcessed": "Cancellation Processed",
     "bettingTransactions.cancellationProcessedSuccessfully": "Transaction cancellation has been processed successfully",
+    "bettingTransactions.cancellationRejectedSuccessfully": "Transaction cancellation has been rejected successfully",
     "bettingTransactions.cancellationApprovedByAdmin": "Cancellation approved by admin",
     "apiConfig.apiConfigurationsLoaded": "API configurations loaded",
     "apiConfig.apiConfigurationsLoadedSuccessfully": "API configurations loaded successfully",
@@ -1708,6 +1710,7 @@ const translations = {
     "bettingTransactions.totalVolume": "Total Volume",
     "bettingTransactions.totalCommission": "Total Commission",
     "bettingTransactions.successRate": "Success Rate",
+    "bettingTransactions.process": "Process",
 
     // Device Authorizations
     "deviceAuthorizations.list": "YapsonPress Authorizations",
@@ -3580,6 +3583,7 @@ const translations = {
     "bettingTransactions.processingCancel": "Traitement annulation...",
     "bettingTransactions.transactionCancelled": "Transaction Annulée",
     "bettingTransactions.cancellationSuccess": "Transaction annulée avec succès",
+    "bettingTransactions.cancellationRejectedSuccessfully": "L'annulation de la transaction a été rejetée avec succès",
     "bettingTransactions.cancellationFailed": "Échec annulation transaction",
     "bettingTransactions.loadedSuccessfully": "Transactions chargées avec succès",
     "bettingTransactions.failedToLoad": "Échec chargement transactions",
@@ -3593,6 +3597,9 @@ const translations = {
     "bettingTransactions.totalVolume": "Volume Total",
     "bettingTransactions.totalCommission": "Commission Totale",
     "bettingTransactions.successRate": "Taux de Réussite",
+    "bettingTransactions.process": "Traiter",
+    // "bettingTransactions.approveCancellation": "Approuver l'annulation",
+    "bettingTransactions.rejectCancellation": "Rejeter l'annulation",
 
     // Device Authorizations
     "deviceAuthorizations.list": "Autorisations d'Appareils YapsonPress",

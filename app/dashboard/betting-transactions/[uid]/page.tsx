@@ -62,22 +62,27 @@ export default function BettingTransactionDetailsPage() {
     fetchTransactionDetails()
   }, [transactionUid])
 
-  const handleProcessCancellation = async () => {
+  const handleProcessCancellation = async (success: boolean) => {
     if (!transaction) return
     
     setProcessingCancellation(true)
     try {
       const payload = {
-        admin_notes: cancellationNotes || t("bettingTransactions.cancellationApprovedByAdmin")
+        success: success,
+        admin_notes: cancellationNotes || (success ? t("bettingTransactions.cancellationApprovedByAdmin") : "Cancellation rejected by admin")
       }
       
-      const response =       await apiFetch(`${baseUrl}/api/payments/betting/admin/transactions/${transaction.uid}/process_cancellation/`, {
+      const response = await apiFetch(`${baseUrl}/api/payments/betting/admin/transactions/${transaction.uid}/process_cancellation/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
-      // Success toast is automatically shown by useApi hook for non-GET requests
       
+      toast({
+        title: t("bettingTransactions.cancellationProcessed"),
+        description: success ? t("bettingTransactions.cancellationProcessedSuccessfully") : t("bettingTransactions.cancellationRejectedSuccessfully"),
+      })
+
       // Update transaction data
       setTransaction(response.transaction || transaction)
       setCancellationNotes("")
@@ -393,13 +398,20 @@ export default function BettingTransactionDetailsPage() {
           
           <AlertDialogFooter>
             <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleProcessCancellation}
+            <Button
+              variant="destructive"
+              onClick={() => handleProcessCancellation(false)}
               disabled={processingCancellation}
-              className="bg-red-600 hover:bg-red-700"
+            >
+              {processingCancellation ? t("bettingTransactions.processing") : t("bettingTransactions.rejectCancellation")}
+            </Button>
+            <Button
+              onClick={() => handleProcessCancellation(true)}
+              disabled={processingCancellation}
+              className="bg-green-600 hover:bg-green-700"
             >
               {processingCancellation ? t("bettingTransactions.processing") : t("bettingTransactions.approveCancellation")}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
