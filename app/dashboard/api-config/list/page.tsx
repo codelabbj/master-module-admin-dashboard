@@ -1,119 +1,100 @@
 "use client"
 
-import { useEffect, useState, useMemo, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import Link from "next/link"
-import { useApi } from "@/lib/useApi"
+import { Switch } from "@/components/ui/switch"
 import { useLanguage } from "@/components/providers/language-provider"
-import { 
-  Search, 
-  ArrowUpDown, 
-  Settings, 
-  Plus, 
-  Filter,
-  RefreshCw,
-  MoreHorizontal,
-  Copy,
-  ChevronLeft,
-  ChevronRight,
-  Eye,
-  Pencil
-} from "lucide-react"
+import { Search, ChevronLeft, ChevronRight, ArrowUpDown, MoreHorizontal, Settings, Copy } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useApi } from "@/lib/useApi"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
-import { Badge } from "@/components/ui/badge"
-import { formatApiDateTime } from "@/lib/utils"
+import Link from "next/link"
 
-const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
-
+import { formatApiDateTime } from "@/lib/utils";
 export default function ApiConfigListPage() {
-  const [configs, setConfigs] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
+  const [configs, setConfigs] = useState<any[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
   const [sortField, setSortField] = useState<"name" | "updated_at" | "created_at" | null>(null)
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
   
-  const apiFetch = useApi()
   const { t } = useLanguage()
-  const { toast } = useToast()
   const itemsPerPage = 20
-
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+  const { toast } = useToast()
+  const apiFetch = useApi()
+  
   // Modal states
   const [detailModalOpen, setDetailModalOpen] = useState(false)
   const [selectedConfig, setSelectedConfig] = useState<any | null>(null)
 
-  const fetchConfigs = useCallback(async () => {
-    setLoading(true)
-    setError("")
-    try {
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        page_size: itemsPerPage.toString(),
-      })
-
-      if (searchTerm.trim() !== "") {
-        params.append("search", searchTerm)
-      }
-
-      if (statusFilter !== "all") {
-        params.append("is_active", statusFilter === "active" ? "true" : "false")
-      }
-
-      // Add sorting
-      let ordering = ""
-      if (sortField === "name") {
-        ordering = `${sortDirection === "asc" ? "" : "-"}name`
-      } else if (sortField === "updated_at") {
-        ordering = `${sortDirection === "asc" ? "" : "-"}updated_at`
-      } else if (sortField === "created_at") {
-        ordering = `${sortDirection === "asc" ? "" : "-"}created_at`
-      }
-      
-      if (ordering) {
-        params.append("ordering", ordering)
-      }
-
-      const endpoint = `${baseUrl}/api/payments/betting/admin/api-config/?${params.toString()}`
-      const data = await apiFetch(endpoint)
-      
-      setConfigs(data.results || [])
-      setTotalCount(data.count || 0)
-      setTotalPages(Math.ceil((data.count || 0) / itemsPerPage))
-      
-      toast({
-        title: t("apiConfig.apiConfigurationsLoaded"),
-        description: t("apiConfig.apiConfigurationsLoadedSuccessfully"),
-      })
-    } catch (err: any) {
-      const errorMessage = extractErrorMessages(err) || t("apiConfig.failedToLoadApiConfigurations")
-      setError(errorMessage)
-      setConfigs([])
-      setTotalCount(0)
-      setTotalPages(1)
-      toast({
-        title: t("apiConfig.failedToLoadApiConfigurations"),
-        description: errorMessage,
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [searchTerm, statusFilter, currentPage, sortField, sortDirection, apiFetch, t, toast])
-
+  // Fetch API configurations
   useEffect(() => {
+    const fetchConfigs = async () => {
+      setLoading(true)
+      setError("")
+      try {
+        const params = new URLSearchParams({
+          page: currentPage.toString(),
+          page_size: itemsPerPage.toString(),
+        })
+
+        if (searchTerm.trim() !== "") {
+          params.append("search", searchTerm)
+        }
+
+        // Add sorting
+        let ordering = ""
+        if (sortField === "name") {
+          ordering = `${sortDirection === "asc" ? "" : "-"}name`
+        } else if (sortField === "updated_at") {
+          ordering = `${sortDirection === "asc" ? "" : "-"}updated_at`
+        } else if (sortField === "created_at") {
+          ordering = `${sortDirection === "asc" ? "" : "-"}created_at`
+        }
+        
+        if (ordering) {
+          params.append("ordering", ordering)
+        }
+
+        const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/betting/admin/api-config/?${params.toString()}`
+        const data = await apiFetch(endpoint)
+        
+        setConfigs(data.results || [])
+        setTotalCount(data.count || 0)
+        setTotalPages(Math.ceil((data.count || 0) / itemsPerPage))
+        
+        toast({
+          title: t("apiConfig.apiConfigurationsLoaded"),
+          description: t("apiConfig.apiConfigurationsLoadedSuccessfully"),
+        })
+      } catch (err: any) {
+        const errorMessage = extractErrorMessages(err)
+        setError(errorMessage)
+        setConfigs([])
+        setTotalCount(0)
+        setTotalPages(1)
+        toast({
+          title: t("apiConfig.failedToLoadApiConfigurations"),
+          description: errorMessage,
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
     fetchConfigs()
-  }, [fetchConfigs])
+  }, [searchTerm, currentPage, sortField, sortDirection])
 
   const handleSort = (field: "name" | "updated_at" | "created_at") => {
     if (sortField === field) {
@@ -124,14 +105,13 @@ export default function ApiConfigListPage() {
     }
   }
 
-  const handleRefresh = () => {
-    fetchConfigs()
+  // Fetch config details
+  const handleOpenDetail = (config: any) => {
+    setDetailModalOpen(true)
+    setSelectedConfig(config)
   }
 
-  const handleOpenDetail = (config: any) => {
-    setSelectedConfig(config)
-    setDetailModalOpen(true)
-  }
+  const startIndex = (currentPage - 1) * itemsPerPage
 
   const maskSecretKey = (key: string) => {
     if (!key) return t("apiConfig.notSet")
@@ -145,48 +125,31 @@ export default function ApiConfigListPage() {
     return `${key.slice(0, 8)}${'•'.repeat(key.length - 12)}${key.slice(-4)}`
   }
 
-  const startIndex = (currentPage - 1) * itemsPerPage
+  const getStatusBadge = (isActive: boolean) => {
+    return (
+      <Badge variant={isActive ? "default" : "secondary"}>
+        {isActive ? t("common.active") : t("common.inactive")}
+      </Badge>
+    )
+  }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-foreground tracking-tight">
-            {t("apiConfig.apiConfigurationManagement")}
-          </h1>
-          <p className="text-muted-foreground">
-            {t("apiConfig.apiConfigurationsDescription") || "Manage and configure API endpoints and keys"}
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
-            <Settings className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-foreground">
-              {totalCount} {t("apiConfig.configs") || "configs"}
-            </span>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            {t("common.refresh") || "Refresh"}
-          </Button>
-          <Link href="/dashboard/api-config/create">
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              {t("apiConfig.createApiConfiguration")}
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* Filters */}
+    <>
       <Card>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            {t("apiConfig.apiConfigurationManagement")}
+          </CardTitle>
+          <Link href="/dashboard/api-config/create">
+            <Button className="mt-2">{t("apiConfig.createApiConfiguration")}</Button>
+          </Link>
+        </CardHeader>
+        <CardContent>
+          {/* Search Controls */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 placeholder={t("apiConfig.searchApiConfigurations")}
                 value={searchTerm}
@@ -195,123 +158,90 @@ export default function ApiConfigListPage() {
                   setCurrentPage(1)
                 }}
                 className="pl-10"
-                variant="minimal"
               />
             </div>
-
-            {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={(val) => {
-              setStatusFilter(val)
-              setCurrentPage(1)
-            }}>
-              <SelectTrigger>
-                <SelectValue placeholder={t("apiConfig.status") || "Filter by status"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("common.allStatuses") || "All statuses"}</SelectItem>
-                <SelectItem value="active">{t("common.active") || "Active"}</SelectItem>
-                <SelectItem value="inactive">{t("common.inactive") || "Inactive"}</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Quick Actions */}
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                {t("common.advancedFilters") || "Advanced filters"}
-              </Button>
-            </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* API Config Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5 text-primary" />
-            {t("apiConfig.apiConfigurationManagement")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {loading && configs.length === 0 ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="flex flex-col items-center space-y-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <span className="text-muted-foreground">{t("common.loading") || "Loading API configs..."}</span>
-              </div>
-            </div>
-          ) : error ? (
-            <div className="p-6 text-center">
-              <ErrorDisplay error={error} onRetry={handleRefresh} />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
+          {/* Table */}
+          <div className="rounded-md border">
+            {loading ? (
+              <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>
+            ) : error ? (
+              <ErrorDisplay
+                error={error}
+                onRetry={() => {
+                  setCurrentPage(1)
+                  setError("")
+                }}
+                variant="full"
+                showDismiss={false}
+              />
+            ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="font-semibold">{t("apiConfig.name")}</TableHead>
-                    <TableHead className="font-semibold">{t("apiConfig.baseUrlTable")}</TableHead>
-                    <TableHead className="font-semibold">{t("apiConfig.status")}</TableHead>
-                    <TableHead className="font-semibold">
-                      <Button variant="ghost" onClick={() => handleSort("updated_at")} className="h-auto p-0 font-semibold text-xs">
-                        {t("apiConfig.lastUpdatedTable")}
-                        <ArrowUpDown className="ml-1 h-3 w-3" />
+                    <TableHead>{t("common.uid") || "UID"}</TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => handleSort("name")} className="h-auto p-0 font-semibold">
+                        {t("apiConfig.name")}
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
                       </Button>
                     </TableHead>
-                    <TableHead className="font-semibold text-right">{t("apiConfig.actions")}</TableHead>
+                    <TableHead>{t("apiConfig.baseUrlTable")}</TableHead>
+                    <TableHead>{t("apiConfig.publicKeyTable")}</TableHead>
+                    <TableHead>{t("apiConfig.timeout")}</TableHead>
+                    <TableHead>{t("apiConfig.status")}</TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => handleSort("updated_at")} className="h-auto p-0 font-semibold">
+                        {t("apiConfig.lastUpdatedTable")}
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                      </Button>
+                    </TableHead>
+                    <TableHead>{t("apiConfig.updatedByTable")}</TableHead>
+                    <TableHead>{t("apiConfig.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {configs.map((config) => (
-                    <TableRow key={config.uid} className="hover:bg-accent/50">
+                    <TableRow key={config.uid}>
                       <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Settings className="h-5 w-5 text-primary" />
-                          </div>
-                          <div>
-                            <div className="font-medium text-foreground">
-                              {config.name || "N/A"}
-                            </div>
-                            <div className="text-xs text-muted-foreground flex items-center gap-1 group">
-                              UID: {config.uid?.slice(0, 8)}...
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(config.uid)
-                                  toast({ title: t("common.uidCopied") || "UID Copied!" })
-                                }}
-                              >
-                                <Copy className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <code className="px-1 py-0.5 bg-muted rounded text-xs">
+                            {config.uid.slice(0, 8)}...
+                          </code>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5"
+                            onClick={() => {
+                              navigator.clipboard.writeText(config.uid)
+                              toast({ title: t("common.uidCopied") || "UID copied!" })
+                            }}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
+                      <TableCell className="font-medium">{config.name}</TableCell>
                       <TableCell>
-                        <code className="text-sm bg-muted px-1 py-0.5 rounded max-w-[200px] truncate block">
-                          {config.base_url || "N/A"}
+                        <code className="text-sm bg-muted px-1 py-0.5 rounded">
+                          {config.base_url}
                         </code>
                       </TableCell>
                       <TableCell>
-                        <Badge 
-                          variant={config.is_active ? "default" : "secondary"}
-                        >
-                          {config.is_active ? t("common.active") : t("common.inactive")}
-                        </Badge>
+                        <code className="text-xs bg-muted px-1 py-0.5 rounded">
+                          {maskPublicKey(config.public_key)}
+                        </code>
                       </TableCell>
+                      <TableCell>{config.timeout_seconds}s</TableCell>
+                      <TableCell>{getStatusBadge(config.is_active)}</TableCell>
                       <TableCell>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-sm">
                           {config.updated_at ? formatApiDateTime(config.updated_at) : "-"}
-                          {config.updated_by_name && (
-                            <div className="mt-1 font-medium">{config.updated_by_name}</div>
-                          )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell>{config.updated_by_name || "-"}</TableCell>
+                      <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm">
@@ -320,12 +250,10 @@ export default function ApiConfigListPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => handleOpenDetail(config)}>
-                              <Eye className="h-4 w-4 mr-2" />
                               {t("apiConfig.viewDetails")}
                             </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
+                            <DropdownMenuItem>
                               <Link href={`/dashboard/api-config/edit/${config.uid}`}>
-                                <Pencil className="h-4 w-4 mr-2" />
                                 {t("apiConfig.editConfiguration")}
                               </Link>
                             </DropdownMenuItem>
@@ -334,169 +262,124 @@ export default function ApiConfigListPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {configs.length === 0 && !loading && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center">
-                        {t("common.noResults") || "No API configurations found."}
-                      </TableCell>
-                    </TableRow>
-                  )}
                 </TableBody>
               </Table>
+            )}
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between mt-6">
+            <div className="text-sm text-muted-foreground">
+              {t("apiConfig.showing")}: {startIndex + 1}-{Math.min(startIndex + itemsPerPage, totalCount)} {t("common.of")} {totalCount}
             </div>
-          )}
+            <div className="text-sm">
+              {t("common.page")} {currentPage} {t("common.of")} {totalPages}
+            </div>
+            <div className="flex items-center space-x-2">
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                {t("common.previous")}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                {t("common.next")}
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            {t("apiConfig.showing")}: {startIndex + 1}-{Math.min(startIndex + itemsPerPage, totalCount)} {t("common.of") || "of"} {totalCount}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1 || loading}
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              {t("common.previous") || t("apiConfig.previous")}
-            </Button>
-            <div className="text-sm font-medium">
-              {t("common.page") || t("apiConfig.page")} {currentPage} / {totalPages}
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages || loading}
-            >
-              {t("common.next") || t("apiConfig.next")}
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Detail Modal */}
+      {/* API Config Details Modal */}
       <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{t("apiConfig.configurationInformation")}</DialogTitle>
           </DialogHeader>
           {selectedConfig ? (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <span className="text-xs font-medium text-muted-foreground uppercase">{t("apiConfig.name")}</span>
-                  <div className="font-semibold">{selectedConfig.name}</div>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-xs font-medium text-muted-foreground uppercase">{t("apiConfig.status")}</span>
-                  <div>
-                    <Badge variant={selectedConfig.is_active ? "default" : "secondary"}>
-                      {selectedConfig.is_active ? t("common.active") : t("common.inactive")}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-xs font-medium text-muted-foreground uppercase">{t("apiConfig.baseUrl")}</span>
-                <div className="bg-muted p-2 rounded flex items-center justify-between">
-                  <code className="text-sm break-all">{selectedConfig.base_url}</code>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <strong>{t("common.uid")}:</strong> {selectedConfig.uid}
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 ml-2 flex-shrink-0"
+                    className="h-5 w-5"
                     onClick={() => {
-                      navigator.clipboard.writeText(selectedConfig.base_url)
-                      toast({ title: t("common.copied") || "Copied!" })
+                      navigator.clipboard.writeText(selectedConfig.uid)
+                      toast({ title: t("common.uidCopied") || "UID copied!" })
                     }}
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
                 </div>
+                <div><strong>{t("apiConfig.name")}:</strong> {selectedConfig.name}</div>
+                <div><strong>{t("apiConfig.baseUrl")}:</strong> <code className="bg-muted px-1 py-0.5 rounded">{selectedConfig.base_url}</code></div>
               </div>
-
+              
               <div className="grid grid-cols-1 gap-4">
-                <div className="space-y-1">
-                  <span className="text-xs font-medium text-muted-foreground uppercase">{t("apiConfig.publicKey")}</span>
-                  <div className="bg-muted p-2 rounded flex items-center justify-between">
-                    <code className="text-sm break-all">{maskPublicKey(selectedConfig.public_key)}</code>
+                <div className="space-y-2">
+                  <div><strong>{t("apiConfig.publicKey")}:</strong></div>
+                  <div className="bg-muted p-2 rounded">
+                    <code>{maskPublicKey(selectedConfig.public_key)}</code>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 ml-2 flex-shrink-0"
+                      className="h-4 w-4 ml-2"
                       onClick={() => {
                         navigator.clipboard.writeText(selectedConfig.public_key)
-                        toast({ title: t("apiConfig.publicKeyCopied") })
+                        toast({ title: t("apiConfig.publicKeyCopied") || "Public key copied!" })
                       }}
                     >
-                      <Copy className="h-4 w-4" />
+                      <Copy className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <span className="text-xs font-medium text-muted-foreground uppercase">{t("apiConfig.secretKey")}</span>
-                  <div className="bg-muted p-2 rounded flex items-center justify-between">
-                    <code className="text-sm break-all">{maskSecretKey(selectedConfig.secret_key)}</code>
+                <div className="space-y-2">
+                  <div><strong>{t("apiConfig.secretKey")}:</strong></div>
+                  <div className="bg-muted p-2 rounded">
+                    <code>{maskSecretKey(selectedConfig.secret_key)}</code>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 ml-2 flex-shrink-0"
+                      className="h-4 w-4 ml-2"
                       onClick={() => {
                         navigator.clipboard.writeText(selectedConfig.secret_key)
-                        toast({ title: t("apiConfig.secretKeyCopied") })
+                        toast({ title: t("apiConfig.secretKeyCopied") || "Secret key copied!" })
                       }}
                     >
-                      <Copy className="h-4 w-4" />
+                      <Copy className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <span className="text-xs font-medium text-muted-foreground uppercase">{t("apiConfig.timeout")}</span>
-                  <div className="text-sm font-medium">{selectedConfig.timeout_seconds} {t("apiConfig.seconds")}</div>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-xs font-medium text-muted-foreground uppercase">{t("apiConfig.created")}</span>
-                  <div className="text-sm">{selectedConfig.created_at ? formatApiDateTime(selectedConfig.created_at) : t("platforms.unknown")}</div>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-xs font-medium text-muted-foreground uppercase">{t("apiConfig.lastUpdated")}</span>
-                  <div className="text-sm">{selectedConfig.updated_at ? formatApiDateTime(selectedConfig.updated_at) : t("platforms.unknown")}</div>
-                </div>
+              <div className="space-y-2">
+                <div><strong>{t("apiConfig.timeout")}:</strong> {selectedConfig.timeout_seconds} {t("apiConfig.seconds") || "seconds"}</div>
+                <div><strong>{t("apiConfig.status")}:</strong> {getStatusBadge(selectedConfig.is_active)}</div>
+                <div><strong>{t("apiConfig.created")}:</strong> {selectedConfig.created_at ? formatApiDateTime(selectedConfig.created_at) : t("platforms.unknown")}</div>
+                <div><strong>{t("apiConfig.lastUpdated")}:</strong> {selectedConfig.updated_at ? formatApiDateTime(selectedConfig.updated_at) : t("platforms.unknown")}</div>
+                <div><strong>{t("apiConfig.updatedBy")}:</strong> {selectedConfig.updated_by_name || t("platforms.unknown")}</div>
               </div>
-
-              {selectedConfig.updated_by_name && (
-                <div className="space-y-1 border-t pt-4">
-                  <span className="text-xs font-medium text-muted-foreground uppercase">{t("apiConfig.updatedBy")}</span>
-                  <div className="text-sm font-medium">{selectedConfig.updated_by_name}</div>
-                </div>
-              )}
             </div>
           ) : null}
-          <div className="flex justify-end mt-6 gap-3">
-            <Button variant="outline" onClick={() => setDetailModalOpen(false)}>
-              {t("common.close") || "Close"}
+          <div className="flex justify-end mt-4">
+            <Button onClick={() => setDetailModalOpen(false)}>
+              {t("common.close")}
             </Button>
-            {selectedConfig && (
-              <Button asChild>
-                <Link href={`/dashboard/api-config/edit/${selectedConfig.uid}`}>
-                  <Pencil className="h-4 w-4 mr-2" />
-                  {t("apiConfig.editConfiguration")}
-                </Link>
-              </Button>
-            )}
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
 }
-

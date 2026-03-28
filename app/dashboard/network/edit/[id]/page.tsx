@@ -11,12 +11,9 @@ import { useLanguage } from "@/components/providers/language-provider"
 import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
-import { ArrowLeft, Save, Loader2, Globe, Settings, Image as ImageIcon } from "lucide-react"
 import { getImageUrl } from "@/lib/utils"
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
-
-// Theme colors are managed via CSS variables and Tailwind classes
 
 export default function NetworkEditPage() {
   const router = useRouter()
@@ -26,15 +23,16 @@ export default function NetworkEditPage() {
   const [code, setCode] = useState("")
   const [country, setCountry] = useState("")
   const [ussdBaseCode, setUssdBaseCode] = useState("")
+  const [paymentLink, setPaymentLink] = useState("")
+  const [paymentUssd, setPaymentUssd] = useState("")
   const [isActive, setIsActive] = useState(true)
   const [sentDepositToModule, setSentDepositToModule] = useState(false)
   const [sentWithdrawalToModule, setSentWithdrawalToModule] = useState(false)
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [currentLogo, setCurrentLogo] = useState<string | null>(null)
   const [countries, setCountries] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
-  const [logoFile, setLogoFile] = useState<File | null>(null)
-  const [existingLogo, setExistingLogo] = useState<string | null>(null)
   const apiFetch = useApi()
   const { t } = useLanguage()
   const { toast } = useToast();
@@ -42,12 +40,9 @@ export default function NetworkEditPage() {
   useEffect(() => {
     const fetchCountries = async () => {
       try {
-        const data = await apiFetch(`${baseUrl}/api/payments/countries/`)
+        const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/countries/`)
         setCountries(Array.isArray(data) ? data : data.results || [])
-        toast({
-          title: t("network.countriesLoaded"),
-          description: t("network.countriesLoadedSuccessfully"),
-        })
+        // GET requests don't show success toasts automatically
       } catch (err: any) {
         const errorMessage = extractErrorMessages(err) || t("network.failedToLoadCountries")
         setCountries([])
@@ -69,19 +64,18 @@ export default function NetworkEditPage() {
       setLoading(true)
       setError("")
       try {
-        const data = await apiFetch(`${baseUrl}/api/payments/networks/${id}/`)
+        const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/networks/${id}/`)
         setNom(data.nom || "")
         setCode(data.code || "")
         setCountry(data.country || "")
         setUssdBaseCode(data.ussd_base_code || "")
+        setPaymentLink(data.payment_link || "")
+        setPaymentUssd(data.payment_ussd || "")
         setIsActive(data.is_active)
         setSentDepositToModule(!!data.sent_deposit_to_module)
         setSentWithdrawalToModule(!!data.sent_withdrawal_to_module)
-        setExistingLogo(data.image || null)
-        toast({
-          title: t("network.loaded"),
-          description: t("network.loadedSuccessfully"),
-        })
+        setCurrentLogo(data.image || null)
+        // GET requests don't show success toasts automatically
       } catch (err: any) {
         const errorMessage = extractErrorMessages(err) || t("network.failedToLoad")
         setError(errorMessage)
@@ -100,45 +94,47 @@ export default function NetworkEditPage() {
 
   const handleSubmit = async (e: any) => {
     e.preventDefault()
-    setSaving(true)
+    setLoading(true)
     setError("")
     try {
-      let body
-      const headers: Record<string, string> = {}
-      
+      let body: any;
+      let headers: Record<string, string> = {};
+
       if (logoFile) {
-        const formData = new FormData()
-        formData.append("nom", nom)
-        formData.append("code", code)
-        formData.append("country", country)
-        formData.append("ussd_base_code", ussdBaseCode)
-        formData.append("is_active", String(isActive))
-        formData.append("sent_deposit_to_module", String(sentDepositToModule))
-        formData.append("sent_withdrawal_to_module", String(sentWithdrawalToModule))
-        formData.append("image", logoFile)
-        body = formData
+        const formData = new FormData();
+        formData.append("nom", nom);
+        formData.append("code", code);
+        formData.append("country", country);
+        formData.append("ussd_base_code", ussdBaseCode);
+        formData.append("payment_link", paymentLink);
+        formData.append("payment_ussd", paymentUssd);
+        formData.append("is_active", isActive.toString());
+        formData.append("sent_deposit_to_module", sentDepositToModule.toString());
+        formData.append("sent_withdrawal_to_module", sentWithdrawalToModule.toString());
+        formData.append("image", logoFile);
+        body = formData;
       } else {
-        body = JSON.stringify({ 
-          nom, 
-          code, 
-          country, 
-          ussd_base_code: ussdBaseCode, 
+        const payload = {
+          nom,
+          code,
+          country,
+          ussd_base_code: ussdBaseCode,
+          payment_link: paymentLink,
+          payment_ussd: paymentUssd,
           is_active: isActive,
           sent_deposit_to_module: sentDepositToModule,
           sent_withdrawal_to_module: sentWithdrawalToModule
-        })
-        headers["Content-Type"] = "application/json"
+        }
+        body = JSON.stringify(payload);
+        headers["Content-Type"] = "application/json";
       }
 
-      await apiFetch(`${baseUrl}/api/payments/networks/${id}/`, {
+      await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/networks/${id}/`, {
         method: "PATCH",
         headers,
-        body
+        body,
       })
-      toast({
-        title: t("network.updated"),
-        description: t("network.updatedSuccessfully"),
-      })
+      // Success toast is automatically shown by useApi hook for non-GET requests
       router.push("/dashboard/network/list")
     } catch (err: any) {
       const errorMessage = extractErrorMessages(err) || t("network.failedToUpdate")
@@ -149,228 +145,154 @@ export default function NetworkEditPage() {
         variant: "destructive",
       })
     } finally {
-      setSaving(false)
+      setLoading(false)
     }
   }
 
   if (loading) {
     return (
-      <div className="space-y-8">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <div className="h-8 w-48 bg-neutral-200 dark:bg-neutral-800 rounded-lg animate-pulse" />
-            <div className="h-4 w-64 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
-          </div>
-          <div className="h-6 w-32 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
-        </div>
-        
-        <Card className="animate-pulse">
-          <CardContent className="p-6">
-            <div className="h-4 w-24 bg-neutral-200 dark:bg-neutral-800 rounded mb-2" />
-            <div className="h-8 w-16 bg-neutral-200 dark:bg-neutral-800 rounded mb-2" />
-            <div className="h-3 w-32 bg-neutral-200 dark:bg-neutral-800 rounded" />
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-center h-96">
+        <span className="text-lg font-semibold">{t("network.loading")}</span>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-foreground tracking-tight">
-            {t("network.edit") || "Edit Network"}
-          </h1>
-          <p className="text-muted-foreground">
-            Mettre à jour la configuration du réseau
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
-            <Settings className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-foreground">
-              ID: {id}
-            </span>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Retour
-          </Button>
-        </div>
-      </div>
-
-      {error && (
-        <ErrorDisplay error={error} />
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="h-5 w-5 text-primary" />
-              Informations de base
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="nom">Nom du réseau</Label>
-                <Input
-                  id="nom"
-                  value={nom}
-                  onChange={(e) => setNom(e.target.value)}
-                  placeholder="ex: MTN, Orange, Airtel"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="code">Code du réseau</Label>
-                <Input
-                  id="code"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="ex: MTN, ORG, AIR"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="country">Pays</Label>
-                <Select value={country} onValueChange={setCountry}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner le pays" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {countries.map((country) => (
-                      <SelectItem key={country.id || country.uid} value={country.id || country.uid}>
-                        {country.nom}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="ussdBaseCode">Code de base USSD</Label>
-                <Input
-                  id="ussdBaseCode"
-                  value={ussdBaseCode}
-                  onChange={(e) => setUssdBaseCode(e.target.value)}
-                  placeholder="ex: *123#"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <Label htmlFor="logo">Logo du réseau</Label>
-                <div className="mt-2 flex items-center gap-4">
-                  {(logoFile || existingLogo) ? (
-                    <div className="relative h-24 w-24 border rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-                      <img 
-                        src={logoFile ? URL.createObjectURL(logoFile) : getImageUrl(existingLogo) || ""} 
-                        alt="Preview" 
-                        className="max-h-full max-w-full object-contain"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          const parent = e.currentTarget.parentElement;
-                          if (parent) {
-                            const fallback = document.createElement('div');
-                            fallback.className = "flex items-center justify-center w-full h-full bg-primary/10 text-primary font-bold text-xl";
-                            fallback.innerText = nom ? nom[0].toUpperCase() : "N";
-                            parent.appendChild(fallback);
-                          }
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <div className="h-24 w-24 border border-dashed rounded-lg flex flex-col items-center justify-center bg-muted/50 text-muted-foreground">
-                      <ImageIcon className="h-8 w-8 mb-1 opacity-20" />
-                      <span className="text-[10px]">No Logo</span>
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <Input
-                      id="logo"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-                      className="cursor-pointer"
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("network.edit")}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Logo Upload */}
+            <div className="space-y-2">
+              <label>{t("network.logo") || "Network Logo"}</label>
+              <div className="flex flex-col gap-4">
+                { (logoFile || currentLogo) && (
+                  <div className="relative h-24 w-24 border rounded overflow-hidden bg-muted flex items-center justify-center">
+                    <img 
+                      src={logoFile ? URL.createObjectURL(logoFile) : (getImageUrl(currentLogo) || "")} 
+                      alt="Preview" 
+                      className="h-full w-full object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const parent = e.currentTarget.parentElement;
+                        if (parent) {
+                          const fallback = document.createElement('div');
+                          fallback.className = "flex h-full w-full items-center justify-center bg-primary text-primary-foreground font-bold text-xl";
+                          fallback.innerText = nom[0] || "?";
+                          parent.appendChild(fallback);
+                        }
+                      }}
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Sélectionnez une nouvelle image pour remplacer l'actuelle
-                    </p>
+                    {logoFile && (
+                      <Button 
+                        type="button" 
+                        variant="destructive" 
+                        size="icon" 
+                        className="absolute top-0 right-0 h-6 w-6 rounded-none rounded-bl"
+                        onClick={() => setLogoFile(null)}
+                      >
+                        ×
+                      </Button>
+                    )}
                   </div>
-                </div>
+                )}
+                <Input 
+                  id="logo"
+                  type="file" 
+                  accept="image/*" 
+                  onChange={(e) => setLogoFile(e.target.files?.[0] || null)} 
+                  className="cursor-pointer"
+                />
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5 text-primary" />
-              Paramètres
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="isActive"
-                  checked={isActive}
-                  onCheckedChange={setIsActive}
-                />
-                <Label htmlFor="isActive">Actif</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="sentDepositToModule"
-                  checked={sentDepositToModule}
-                  onCheckedChange={setSentDepositToModule}
-                />
-                <Label htmlFor="sentDepositToModule">Envoyer le dépôt au module</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="sentWithdrawalToModule"
-                  checked={sentWithdrawalToModule}
-                  onCheckedChange={setSentWithdrawalToModule}
-                />
-                <Label htmlFor="sentWithdrawalToModule">Envoyer le retrait au module</Label>
+            <div>
+              <label>{t("network.name")}</label>
+              <Input value={nom} onChange={e => setNom(e.target.value)} required />
+            </div>
+            <div>
+              <label>{t("network.code")}</label>
+              <Input value={code} onChange={e => setCode(e.target.value)} required />
+            </div>
+            <div>
+              <label>{t("network.country")}</label>
+              <Select
+                value={country}
+                onValueChange={setCountry}
+                disabled={countries.length === 0}
+              >
+                <SelectTrigger className="w-full" aria-label={t("network.country")}> 
+                  <SelectValue placeholder={t("network.selectCountry")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {countries.length === 0 ? (
+                    <SelectItem value="no-countries" disabled>
+                      {t("network.noCountries") || "No countries available"}
+                    </SelectItem>
+                  ) : (
+                    countries.map((c: any) => (
+                      <SelectItem key={c.uid} value={c.uid}>
+                        {c.nom}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label>{t("network.ussdBaseCode")}</label>
+              <Input value={ussdBaseCode} onChange={e => setUssdBaseCode(e.target.value)} required />
+            </div>
+            <div>
+              <label>{t("network.paymentLink")}</label>
+              <Input value={paymentLink} onChange={e => setPaymentLink(e.target.value)} placeholder="https://example.com/pay" />
+            </div>
+            <div>
+              <label>{t("network.paymentUssd")}</label>
+              <Input value={paymentUssd} onChange={e => setPaymentUssd(e.target.value)} placeholder="*123#" />
+            </div>
+            <div>
+              <label>{t("network.status")}</label>
+              <div className="relative">
+                <select value={isActive ? "active" : "inactive"} onChange={e => setIsActive(e.target.value === "active")}
+                  className="w-full h-10 px-3 py-2 pr-10 rounded-md border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-colors duration-300 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                >
+                  <option value="active">{t("network.active")}</option>
+                  <option value="inactive">{t("network.inactive")}</option>
+                </select>
+                <svg className="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Submit Button */}
-        <div className="flex justify-end space-x-4">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => router.back()}
-          >
-            Annuler
-          </Button>
-          <Button 
-            type="submit" 
-            disabled={saving}
-          >
-            {saving ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Sauvegarde...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Sauvegarder les modifications
-              </>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="sent-deposit-to-module"
+                checked={sentDepositToModule}
+                onCheckedChange={setSentDepositToModule}
+              />
+              <Label htmlFor="sent-deposit-to-module">{t("network.sentDepositToModule") || "Sent deposit to module"}</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="sent-withdrawal-to-module"
+                checked={sentWithdrawalToModule}
+                onCheckedChange={setSentWithdrawalToModule}
+              />
+              <Label htmlFor="sent-withdrawal-to-module">{t("network.sentWithdrawalToModule") || "Sent withdrawal to module"}</Label>
+            </div>
+            {error && (
+              <ErrorDisplay
+                error={error}
+                variant="inline"
+                showRetry={false}
+                className="mb-4"
+              />
             )}
-          </Button>
-        </div>
-      </form>
-    </div>
+            <Button type="submit" disabled={loading}>{loading ? t("network.saving") : t("network.save")}</Button>
+          </form>
+      </CardContent>
+    </Card>
   )
 } 

@@ -1,5 +1,4 @@
 "use client"
-
 import { useEffect, useState, useMemo } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
@@ -9,21 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Link from "next/link"
 import { useApi } from "@/lib/useApi"
 import { useLanguage } from "@/components/providers/language-provider"
-import { 
-  Search, 
-  Plus, 
-  Filter, 
-  CheckCircle, 
-  XCircle,
-  Pencil,
-  Download,
-  RefreshCw,
-  Smartphone
-} from "lucide-react"
+import { Search, ArrowUpDown } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
-import { Badge } from "@/components/ui/badge"
 import { getImageUrl } from "@/lib/utils"
+
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
@@ -33,262 +22,316 @@ export default function NetworkListPage() {
   const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [countryFilter, setCountryFilter] = useState("all")
+  const [startDate, setStartDate] = useState("")
+  const [endDate, setEndDate] = useState("")
+  const [countries, setCountries] = useState<any[]>([])
+  const [sortField, setSortField] = useState<"nom" | "code" | null>(null)
+  const [sortDirection, setSortDirection] = useState<"+" | "-">("-")
   const apiFetch = useApi()
   const { t } = useLanguage()
   const { toast } = useToast();
-
-  const fetchNetworks = async () => {
-    setLoading(true)
-    setError("")
-    try {
-      const data = await apiFetch(`${baseUrl}/api/payments/networks/`)
-      const networksData = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : []
-      setNetworks(networksData)
-      toast({
-        title: t("network.loaded") || "Réseaux chargés",
-        description: t("network.loadedSuccessfully") || "Liste des réseaux chargée avec succès",
-      })
-    } catch (err: any) {
-      const errorMessage = extractErrorMessages(err) || t("network.failedToLoad") || "Échec du chargement des réseaux"
-      setError(errorMessage)
-      toast({
-        title: t("network.failedToLoad") || "Échec du chargement",
-        description: errorMessage,
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [currentPage, setCurrentPage] = useState(1)
+  
 
   useEffect(() => {
+    const fetchNetworks = async () => {
+      setLoading(true)
+      setError("")
+      try {
+        let endpoint = "";
+        if (searchTerm.trim() !== "" || statusFilter !== "all" || countryFilter !== "all" || sortField || startDate || endDate) {
+          const params = new URLSearchParams({
+            page: "1",
+            page_size: "100",
+          });
+          if (searchTerm.trim() !== "") {
+            params.append("search", searchTerm);
+          }
+          if (statusFilter !== "all") {
+            params.append("is_active", statusFilter === "active" ? "true" : "false");
+          }
+          if (countryFilter !== "all") {
+            params.append("country", countryFilter);
+          }
+          if (startDate) {
+            params.append("created_at__gte", startDate);
+          }
+          if (endDate) {
+            // Add one day to end date to include the entire end date
+            const endDateObj = new Date(endDate);
+            endDateObj.setDate(endDateObj.getDate() + 1);
+            params.append("created_at__lt", endDateObj.toISOString().split('T')[0]);
+          }
+          if (sortField) {
+            params.append("ordering", `${sortDirection === "+" ? "+" : "-"}${sortField}`);
+          }
+          const query = params.toString().replace(/ordering=%2B/g, "ordering=+");
+          endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/networks/?${query}`;
+        } else {
+          const params = new URLSearchParams({
+            page: "1",
+            page_size: "100",
+          });
+          endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/networks/?${params.toString()}`;
+        }
+        const data = await apiFetch(endpoint)
+        setNetworks(Array.isArray(data) ? data : data.results || [])
+        toast({
+          title: t("network.success"),
+          description: t("network.loadedSuccessfully"),
+        })
+      } catch (err: any) {
+        const errorMessage = extractErrorMessages(err) || t("network.failedToLoad")
+        setError(errorMessage)
+        setNetworks([])
+        toast({
+          title: t("network.failedToLoad"),
+          description: errorMessage,
+          variant: "destructive",
+        })
+        console.error('Networks fetch error:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
     fetchNetworks()
+  }, [searchTerm, statusFilter, countryFilter, startDate, endDate, sortField, sortDirection])
+
+  // Fetch countries for filter
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/countries/`)
+        setCountries(Array.isArray(data) ? data : data.results || [])
+        toast({
+          title: t("network.countriesLoaded"),
+          description: t("network.countriesLoadedSuccessfully"),
+        })
+      } catch (err: any) {
+        const errorMessage = extractErrorMessages(err) || t("network.failedToLoadCountries")
+        console.error('Countries fetch error:', err)
+        setCountries([])
+        toast({
+          title: t("network.countriesFailedToLoad"),
+          description: errorMessage,
+          variant: "destructive",
+        })
+      }
+    }
+    
+    fetchCountries()
   }, [])
 
-  const filteredNetworks = useMemo(() => {
-    let filtered = Array.isArray(networks) ? networks : []
+  // Remove client-side filtering since it's now handled by the API
+  const filteredNetworks = networks
 
-    if (searchTerm) {
-      filtered = filtered.filter(network =>
-        network.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        network.code?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+  const handleSort = (field: "nom" | "code") => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === "+" ? "-" : "+"))
+      setSortField(field)
+    } else {
+      setSortField(field)
+      setSortDirection("-")
     }
-
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(network => 
-        statusFilter === "active" ? network.is_active : !network.is_active
-      )
-    }
-
-    return filtered
-  }, [networks, searchTerm, statusFilter])
-
-  const handleRefresh = () => {
-    fetchNetworks()
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-foreground tracking-tight">
-            Réseaux
-          </h1>
-          <p className="text-muted-foreground">
-            Gérer les réseaux mobiles et les fournisseurs
-          </p>
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("network.list")}</CardTitle>
+        <Link href="/dashboard/network/create"><Button className="mt-2">{t("network.add")}</Button></Link>
+      </CardHeader>
+      <CardContent>
+        {/* Search and Filter Controls */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder={t("common.search")}
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value)
+                setCurrentPage(1)
+              }}
+              className="pl-10"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder={t("network.status")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t("common.all")}</SelectItem>
+              <SelectItem value="active">{t("network.active")}</SelectItem>
+              <SelectItem value="inactive">{t("network.inactive")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={countryFilter}
+            onValueChange={setCountryFilter}
+            disabled={loading || countries.length === 0}
+          >
+            <SelectTrigger className="w-full sm:w-48" aria-label={t("network.country")}> 
+              <SelectValue placeholder={loading ? t("common.loading") : t("network.country")} />
+            </SelectTrigger>
+            <SelectContent>
+              {loading ? (
+                <SelectItem value="loading" disabled>{t("common.loading")}</SelectItem>
+              ) : countries.length === 0 ? (
+                <SelectItem value="no-countries" disabled>{t("network.noCountries") || "No countries available"}</SelectItem>
+              ) : (
+                [<SelectItem value="all" key="all">{t("common.all")}</SelectItem>,
+                  ...countries.map((country: any) => (
+                    <SelectItem key={country.uid} value={country.uid}>
+                      {country.nom}
+                    </SelectItem>
+                  ))
+                ]
+              )}
+            </SelectContent>
+          </Select>
         </div>
         
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
-            <Smartphone className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-foreground">
-              {filteredNetworks.length} réseaux
-            </span>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Actualiser
-          </Button>
-          <Link href="/dashboard/network/create">
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Ajouter un réseau
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        {/* Date Filters */}
+        <div className="flex flex-col lg:flex-row gap-4 mb-6">
+          <div className="flex flex-col lg:flex-row gap-4 flex-1">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {t("network.startDate") || "Start Date"}
+              </label>
               <Input
-                placeholder="Rechercher un réseau..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value)
+                  setCurrentPage(1)
+                }}
+                className="w-full lg:w-48"
               />
             </div>
-
-            {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filtrer par statut" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les statuts</SelectItem>
-                <SelectItem value="active">Actif</SelectItem>
-                <SelectItem value="inactive">Inactif</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Quick Actions */}
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                Filtres avancés
-              </Button>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {t("network.endDate") || "End Date"}
+              </label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value)
+                  setCurrentPage(1)
+                }}
+                className="w-full lg:w-48"
+              />
             </div>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex items-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setStartDate("")
+                setEndDate("")
+                setCurrentPage(1)
+              }}
+              className="h-10"
+            >
+              {t("network.clearDates") || "Clear Dates"}
+            </Button>
+          </div>
+        </div>
 
-      {/* Networks Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Smartphone className="h-5 w-5 text-primary" />
-            Liste des réseaux
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="flex flex-col items-center space-y-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <span className="text-muted-foreground">Chargement des réseaux...</span>
-              </div>
-            </div>
-          ) : error ? (
-            <div className="p-6 text-center">
-              <ErrorDisplay error={error} />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="font-semibold">Réseau</TableHead>
-                    <TableHead className="font-semibold">Code</TableHead>
-                    <TableHead className="font-semibold">ID</TableHead>
-                    <TableHead className="font-semibold">Statut</TableHead>
-                    <TableHead className="font-semibold text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredNetworks.map((network) => (
-                    <TableRow key={network.id || network.uid} className="hover:bg-accent/50">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/5">
-                            {(network.image || network.logo) ? (
-                              <img 
-                                src={getImageUrl(network.image || network.logo) || ""} 
-                                alt={network.nom} 
-                                className="h-full w-full object-contain p-1" 
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                  const parent = e.currentTarget.parentElement;
-                                  if (parent) {
-                                    const fallback = document.createElement('div');
-                                    fallback.className = "flex items-center justify-center w-full h-full bg-primary/10 text-primary font-bold text-xs";
-                                    fallback.innerText = network.nom ? network.nom[0].toUpperCase() : "N";
-                                    parent.appendChild(fallback);
-                                  }
-                                }}
-                              />
-                            ) : (
-                              <Smartphone className="h-5 w-5 text-primary opacity-40" />
-                            )}
-                          </div>
-                          <div>
-                            <div className="font-medium text-foreground">
-                              {network.nom || "N/A"}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {network.country?.nom || "Pays inconnu"}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="font-mono">
-                          {network.code || "N/A"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {network.id || network.uid || "N/A"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={network.is_active ? "default" : "secondary"}
-                        >
-                          {network.is_active ? 'Actif' : 'Inactif'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Link href={`/dashboard/network/edit/${network.id || network.uid}`}>
-                            <Button variant="ghost" size="sm">
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Empty State */}
-      {!loading && filteredNetworks.length === 0 && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <div className="space-y-4">
-              <div className="h-16 w-16 rounded-full bg-accent mx-auto flex items-center justify-center">
-                <Smartphone className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">Aucun réseau trouvé</h3>
-                <p className="text-muted-foreground">
-                  {searchTerm || statusFilter !== "all" 
-                    ? "Aucun réseau ne correspond à vos critères de recherche."
-                    : "Commencez par ajouter votre premier réseau mobile."
-                  }
-                </p>
-              </div>
-              {(!searchTerm && statusFilter === "all") && (
-                <Link href="/dashboard/network/create">
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Ajouter un réseau
+        {loading ? (
+          <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>
+        ) : error ? (
+          <ErrorDisplay
+            error={error}
+            onRetry={() => {
+              setError("")
+              // This will trigger the useEffect to refetch
+            }}
+            variant="inline"
+            className="mb-6"
+          />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t("network.logo") || "Logo"}</TableHead>
+                <TableHead>
+                  <Button type="button" variant="ghost" onClick={() => handleSort("nom")} className="h-auto p-0 font-semibold">
+                    {t("network.name")}
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
                   </Button>
-                </Link>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+                </TableHead>
+                <TableHead>
+                  <Button type="button" variant="ghost" onClick={() => handleSort("code")} className="h-auto p-0 font-semibold">
+                    {t("network.code")}
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </TableHead>
+                <TableHead>{t("network.country")}</TableHead>
+                <TableHead>{t("network.status")}</TableHead>
+                <TableHead>{t("network.sentDepositToModule") || "Sent deposit to module"}</TableHead>
+                <TableHead>{t("network.sentWithdrawalToModule") || "Sent withdrawal to module"}</TableHead>
+                <TableHead>{t("network.actions")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredNetworks.map((network: any) => (
+                <TableRow key={network.uid}>
+                  <TableCell>
+                    <div className="h-10 w-10 border rounded overflow-hidden bg-muted flex items-center justify-center">
+                      {network.image ? (
+                        <img 
+                          src={getImageUrl(network.image) || ""} 
+                          alt={network.nom} 
+                          className="h-full w-full object-contain"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const parent = e.currentTarget.parentElement;
+                            if (parent) {
+                              const fallback = document.createElement('div');
+                              fallback.className = "flex h-full w-full items-center justify-center bg-primary text-primary-foreground font-bold";
+                              fallback.innerText = network.nom[0] || "?";
+                              parent.appendChild(fallback);
+                            }
+                          }}
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-primary text-primary-foreground font-bold">
+                          {network.nom[0] || "?"}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>{network.nom}</TableCell>
+                  <TableCell>{network.code}</TableCell>
+                  <TableCell>{network.country_name || network.country}</TableCell>
+                  <TableCell>{network.is_active ? t("network.active") : t("network.inactive")}</TableCell>
+                  <TableCell>
+                    {network.sent_deposit_to_module ? (
+                      <img src="/icon-yes.svg" alt="Yes" className="h-4 w-4" />
+                    ) : (
+                      <img src="/icon-no.svg" alt="No" className="h-4 w-4" />
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {network.sent_withdrawal_to_module ? (
+                      <img src="/icon-yes.svg" alt="Yes" className="h-4 w-4" />
+                    ) : (
+                      <img src="/icon-no.svg" alt="No" className="h-4 w-4" />
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Link href={`/dashboard/network/edit/${network.uid}`}><Button size="sm">{t("network.editButton")}</Button></Link>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
   )
-}
+} 

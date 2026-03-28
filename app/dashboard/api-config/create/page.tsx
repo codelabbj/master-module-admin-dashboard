@@ -5,50 +5,59 @@ import { useRouter } from "next/navigation"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import { useApi } from "@/lib/useApi"
 import { useLanguage } from "@/components/providers/language-provider"
 import { useToast } from "@/hooks/use-toast"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
-import { ArrowLeft, Save, Loader2, Settings, CheckCircle, Plus } from "lucide-react"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-
-const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+import { Settings, Eye, EyeOff } from "lucide-react"
 
 export default function ApiConfigCreatePage() {
   const [name, setName] = useState("")
   const [baseUrl, setBaseUrl] = useState("")
-  const [apiKey, setApiKey] = useState("")
-  const [description, setDescription] = useState("")
+  const [publicKey, setPublicKey] = useState("")
+  const [secretKey, setSecretKey] = useState("")
+  const [timeoutSeconds, setTimeoutSeconds] = useState("")
   const [isActive, setIsActive] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [showSecretKey, setShowSecretKey] = useState(false)
+  
   const router = useRouter()
   const apiFetch = useApi()
   const { t } = useLanguage()
-  const { toast } = useToast();
+  const { toast } = useToast()
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
     setLoading(true)
     setError("")
+    
     try {
-      await apiFetch(`${baseUrl}/api/api-configs/`, {
+      const payload = {
+        name: name.trim(),
+        base_url: baseUrl.trim(),
+        public_key: publicKey.trim(),
+        secret_key: secretKey.trim(),
+        timeout_seconds: parseInt(timeoutSeconds) || 30,
+        is_active: isActive,
+      }
+
+      await apiFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "")}/api/payments/betting/admin/api-config/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, base_url: baseUrl, api_key: apiKey, description, is_active: isActive })
+        body: JSON.stringify(payload),
       })
-      toast({
-        title: t("apiConfig.created"),
-        description: t("apiConfig.createdSuccessfully"),
-      })
+      // Success toast is automatically shown by useApi hook for non-GET requests
+      
       router.push("/dashboard/api-config/list")
     } catch (err: any) {
-      const errorMessage = extractErrorMessages(err) || t("apiConfig.failedToCreate")
+      const errorMessage = extractErrorMessages(err)
       setError(errorMessage)
       toast({
-        title: t("apiConfig.failedToCreate"),
+        title: t("apiConfig.failedToCreateApiConfiguration"),
         description: errorMessage,
         variant: "destructive",
       })
@@ -58,210 +67,173 @@ export default function ApiConfigCreatePage() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="outline" 
-            onClick={() => router.back()}
-            className="flex items-center gap-2 hover-lift"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-4xl font-bold text-gradient">
-              Create API Config
-            </h1>
-            <p className="text-muted-foreground mt-2 text-lg">
-              Create a new API configuration
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
-          <Settings className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium text-foreground">
-            New Config
-          </span>
-        </div>
-      </div>
-
-      {error && (
-        <Card className="minimal-card">
-          <CardContent className="p-6">
-            <ErrorDisplay error={error} />
-          </CardContent>
-        </Card>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* API Config Information */}
-        <Card className="minimal-card hover-lift">
-          <CardHeader className="border-b border-border/50">
-            <CardTitle className="flex items-center gap-3 text-xl font-semibold">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Settings className="h-5 w-5 text-primary" />
-              </div>
-              <span>API Config Information</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6 space-y-6">
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Settings className="h-5 w-5" />
+          {t("apiConfig.createApiConfigTitle")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Basic Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-sm font-medium text-foreground">
-                Config Name *
-              </Label>
+              <Label htmlFor="name">{t("apiConfig.configurationName")} *</Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="ex: Payment Gateway, SMS Service"
-                className="minimal-input"
-                variant="minimal"
+                placeholder={t("apiConfig.configurationNamePlaceholder")}
                 required
               />
-              <p className="text-xs text-muted-foreground">
-                The display name of the API configuration
+              <p className="text-sm text-muted-foreground">
+                {t("apiConfig.configurationNameDescription")}
               </p>
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="baseUrl" className="text-sm font-medium text-foreground">
-                Base URL *
-              </Label>
+              <Label htmlFor="base_url">{t("apiConfig.baseUrl")} *</Label>
               <Input
-                id="baseUrl"
+                id="base_url"
+                type="url"
                 value={baseUrl}
                 onChange={(e) => setBaseUrl(e.target.value)}
-                placeholder="https://api.example.com"
-                className="minimal-input"
-                variant="minimal"
+                placeholder={t("apiConfig.baseUrlPlaceholder")}
                 required
               />
-              <p className="text-xs text-muted-foreground">
-                The base URL for the API endpoint
+              <p className="text-sm text-muted-foreground">
+                {t("apiConfig.baseUrlDescription")}
               </p>
             </div>
-            
+          </div>
+
+          {/* API Keys */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="apiKey" className="text-sm font-medium text-foreground">
-                API Key
-              </Label>
+              <Label htmlFor="public_key">{t("apiConfig.publicKey")} *</Label>
               <Input
-                id="apiKey"
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Enter API key..."
-                className="minimal-input font-mono"
-                variant="minimal"
+                id="public_key"
+
+                value={publicKey}
+                onChange={(e) => setPublicKey(e.target.value)}
+                placeholder={t("apiConfig.publicKeyPlaceholder")}
+                required
               />
-              <p className="text-xs text-muted-foreground">
-                API key for authentication (optional)
+              <p className="text-sm text-muted-foreground">
+                {t("apiConfig.publicKeyDescription")}
               </p>
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="description" className="text-sm font-medium text-foreground">
-                Description
-              </Label>
-              <Input
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="API config description..."
-                className="minimal-input"
-                variant="minimal"
-              />
-              <p className="text-xs text-muted-foreground">
-                Optional description of the API config
+              <Label htmlFor="secret_key">{t("apiConfig.secretKey")} *</Label>
+              <div className="relative">
+                <Input
+                  id="secret_key"
+                  type={showSecretKey ? "text" : "password"}
+                  value={secretKey}
+                  onChange={(e) => setSecretKey(e.target.value)}
+                  placeholder={t("apiConfig.secretKeyPlaceholder")}
+                  required
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  onClick={() => setShowSecretKey(!showSecretKey)}
+                  tabIndex={-1}
+                >
+                  {showSecretKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {t("apiConfig.secretKeyDescription")}
               </p>
             </div>
-            
-            <div className="flex items-center justify-between p-4 bg-accent/30 rounded-lg">
-              <div className="space-y-1">
-                <Label htmlFor="isActive" className="text-sm font-medium text-foreground">
-                  Config Status
+          </div>
+
+          {/* Advanced Settings */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="timeout">{t("apiConfig.timeoutSeconds")} *</Label>
+              <Input
+                id="timeout"
+                type="number"
+                min="1"
+                max="300"
+                value={timeoutSeconds}
+                onChange={(e) => setTimeoutSeconds(e.target.value)}
+                placeholder="30"
+                required
+              />
+              <p className="text-sm text-muted-foreground">
+                {t("apiConfig.timeoutDescription")}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="is_active">{t("apiConfig.configurationStatus")}</Label>
+              <div className="flex items-center space-x-2 mt-2">
+                <Switch
+                  id="is_active"
+                  checked={isActive}
+                  onCheckedChange={setIsActive}
+                />
+                <Label htmlFor="is_active">
+                  {isActive ? t("common.active") : t("common.inactive")}
                 </Label>
-                <p className="text-xs text-muted-foreground">
-                  Enable this config so it's available in the system
-                </p>
               </div>
-              <Switch
-                id="isActive"
-                checked={isActive}
-                onCheckedChange={setIsActive}
-              />
+              <p className="text-sm text-muted-foreground">
+                {t("apiConfig.configurationStatusDescription")}
+              </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Preview Card */}
-        {(name || baseUrl) && (
-          <Card className="minimal-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                Preview
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4 p-4 bg-accent/20 rounded-lg">
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Settings className="h-6 w-6 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-foreground">
-                    {name || "API Config"}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    URL: {baseUrl || "https://api.example.com"}
-                  </p>
-                  {apiKey && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      API Key: {apiKey}
-                    </p>
-                  )}
-                </div>
-                <Badge variant={isActive ? "default" : "secondary"}>
-                  {isActive ? "Active" : "Inactive"}
-                </Badge>
+          {/* Security Notice */}
+          <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+            <h4 className="font-medium text-yellow-900 dark:text-yellow-100 mb-2">{t("apiConfig.securityNotice")}:</h4>
+            <div className="text-sm text-yellow-800 dark:text-yellow-200 space-y-1">
+              <div>• {t("apiConfig.secretKeysMasked")}</div>
+              <div>• {t("apiConfig.storeKeysSecurely")}</div>
+              <div>• {t("apiConfig.useHttpsOnly")}</div>
+              <div>• {t("apiConfig.testConfigurations")}</div>
+            </div>
+          </div>
+
+          {/* Configuration Summary */}
+          {(name && baseUrl && publicKey && secretKey && timeoutSeconds) && (
+            <div className="p-4 border rounded-lg bg-green-50 dark:bg-green-900/20">
+              <h4 className="font-medium text-green-900 dark:text-green-100 mb-2">{t("apiConfig.configurationSummary")}:</h4>
+              <div className="text-sm text-green-800 dark:text-green-200 space-y-1">
+                <div><strong>{t("apiConfig.nameLabel")}:</strong> {name}</div>
+                <div><strong>{t("apiConfig.baseUrlLabel")}:</strong> {baseUrl}</div>
+                <div><strong>{t("apiConfig.publicKeyLabel")}:</strong> {publicKey.slice(0, 8)}...{publicKey.slice(-4)}</div>
+                <div><strong>{t("apiConfig.secretKeyLabel")}:</strong> {secretKey.slice(0, 4)}••••{secretKey.slice(-4)}</div>
+                <div><strong>{t("apiConfig.timeoutLabel")}:</strong> {timeoutSeconds}s</div>
+                <div><strong>{t("apiConfig.statusLabel")}:</strong> {isActive ? t("common.active") : t("common.inactive")}</div>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          )}
 
-        {/* Action Buttons */}
-        <div className="flex items-center justify-between pt-6 border-t border-border/50">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => router.back()}
-            className="hover-lift"
-          >
-            Cancel
-          </Button>
-          <Button 
-            type="submit" 
-            disabled={loading || !name || !baseUrl}
-            className="min-w-[140px] hover-lift"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Create Config
-              </>
-            )}
-          </Button>
-        </div>
-      </form>
-    </div>
+          {error && (
+            <ErrorDisplay
+              error={error}
+              variant="inline"
+              showRetry={false}
+              className="mb-4"
+            />
+          )}
+
+          <div className="flex gap-4">
+            <Button type="submit" disabled={loading || !name || !baseUrl || !publicKey || !secretKey || !timeoutSeconds}>
+              {loading ? t("apiConfig.creatingConfiguration") : t("apiConfig.createConfiguration")}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => router.push("/dashboard/api-config/list")}>
+              {t("common.cancel")}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   )
 }
-

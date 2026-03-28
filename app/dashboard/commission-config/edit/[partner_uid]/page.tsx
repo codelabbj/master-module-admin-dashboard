@@ -1,347 +1,231 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter, useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
 import { useApi } from "@/lib/useApi"
 import { useLanguage } from "@/components/providers/language-provider"
 import { useToast } from "@/hooks/use-toast"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
-import { ArrowLeft, Save, Loader2, DollarSign, CheckCircle, Plus } from "lucide-react"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
+import { Percent } from "lucide-react"
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
 export default function CommissionConfigEditPage() {
-  const [name, setName] = useState("")
-  const [rate, setRate] = useState("")
-  const [minAmount, setMinAmount] = useState("")
-  const [maxAmount, setMaxAmount] = useState("")
-  const [description, setDescription] = useState("")
-  const [isActive, setIsActive] = useState(true)
-  const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState("")
-  const router = useRouter()
   const params = useParams()
+  const router = useRouter()
   const apiFetch = useApi()
   const { t } = useLanguage()
-  const { toast } = useToast();
+  const { toast } = useToast()
+  
+  const partnerUid = params.partner_uid as string
+  
+  const [partnerInfo, setPartnerInfo] = useState<any | null>(null)
+  const [hasConfig, setHasConfig] = useState(false)
+  const [depositCommissionRate, setDepositCommissionRate] = useState("")
+  const [withdrawalCommissionRate, setWithdrawalCommissionRate] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [fetching, setFetching] = useState(true)
+  const [error, setError] = useState("")
 
-  const configId = params.partner_uid as string
-
+  // Fetch partner commission config
   useEffect(() => {
-    const fetchConfig = async () => {
-      setLoading(true)
+    const fetchPartnerConfig = async () => {
+      if (!partnerUid) return
+      
+      setFetching(true)
       setError("")
+      
       try {
-        const data = await apiFetch(`${baseUrl}/api/commission-configs/${configId}/`)
-        setName(data.name || "")
-        setRate(data.rate ? data.rate.toString() : "")
-        setMinAmount(data.min_amount ? data.min_amount.toString() : "")
-        setMaxAmount(data.max_amount ? data.max_amount.toString() : "")
-        setDescription(data.description || "")
-        setIsActive(data.is_active ?? true)
+        const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/betting/admin/commission-configs/get_partner_config/?partner_uid=${partnerUid}`
+        const data = await apiFetch(endpoint)
+        
+        setPartnerInfo(data.partner_info)
+        setHasConfig(data.has_config)
+        
+        if (data.has_config && data.config) {
+          setDepositCommissionRate(data.config.deposit_commission_rate || "")
+          setWithdrawalCommissionRate(data.config.withdrawal_commission_rate || "")
+        }
+        // GET requests don't show success toasts automatically
       } catch (err: any) {
-        const errorMessage = extractErrorMessages(err) || t("commissionConfig.failedToLoad")
+        const errorMessage = extractErrorMessages(err)
         setError(errorMessage)
         toast({
-          title: t("commissionConfig.failedToLoad"),
+          title: "Failed to load partner config",
           description: errorMessage,
           variant: "destructive",
         })
       } finally {
-        setLoading(false)
+        setFetching(false)
       }
     }
+    
+    fetchPartnerConfig()
+  }, [partnerUid])
 
-    if (configId) {
-      fetchConfig()
-    }
-  }, [configId, apiFetch, t, toast])
-
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSaving(true)
+    setLoading(true)
     setError("")
+    
     try {
-      await apiFetch(`${baseUrl}/api/commission-configs/${configId}/`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          name, 
-          rate: parseFloat(rate) || 0, 
-          min_amount: parseFloat(minAmount) || 0, 
-          max_amount: parseFloat(maxAmount) || 0,
-          description,
-          is_active: isActive 
+      const payload = {
+        partner: partnerUid,
+        deposit_commission_rate: parseFloat(depositCommissionRate) || 0,
+        withdrawal_commission_rate: parseFloat(withdrawalCommissionRate) || 0,
+      }
+
+      let response
+      if (hasConfig) {
+        // Update existing config
+        // Since we don't have the config UID, we need to get it first
+        const configEndpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/betting/admin/commission-configs/get_partner_config/?partner_uid=${partnerUid}`
+        const configData = await apiFetch(configEndpoint)
+        const configUid = configData.config.uid
+        
+        response = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/betting/admin/commission-configs/${configUid}/`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            deposit_commission_rate: payload.deposit_commission_rate,
+            withdrawal_commission_rate: payload.withdrawal_commission_rate,
+          }),
         })
-      })
-      toast({
-        title: t("commissionConfig.updated"),
-        description: t("commissionConfig.updatedSuccessfully"),
-      })
+      } else {
+        // Create new config
+        response = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/betting/admin/commission-configs/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+      }
+      // Success toast is automatically shown by useApi hook for non-GET requests
+      
       router.push("/dashboard/commission-config/list")
     } catch (err: any) {
-      const errorMessage = extractErrorMessages(err) || t("commissionConfig.failedToUpdate")
+      const errorMessage = extractErrorMessages(err)
       setError(errorMessage)
       toast({
-        title: t("commissionConfig.failedToUpdate"),
+        title: `Failed to ${hasConfig ? "update" : "create"} configuration`,
         description: errorMessage,
         variant: "destructive",
       })
     } finally {
-      setSaving(false)
+      setLoading(false)
     }
   }
 
-  if (loading) {
+  if (fetching) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <span className="text-muted-foreground">Loading commission config...</span>
-        </div>
+      <div className="flex items-center justify-center h-96">
+        <span className="text-lg font-semibold">Loading partner configuration...</span>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="outline" 
-            onClick={() => router.back()}
-            className="flex items-center gap-2 hover-lift"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-4xl font-bold text-gradient">
-              Edit Commission Config
-            </h1>
-            <p className="text-muted-foreground mt-2 text-lg">
-              Update commission configuration
-            </p>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Percent className="h-5 w-5" />
+          {hasConfig ? "Edit" : "Create"} Commission Configuration
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {/* Partner Information */}
+        {partnerInfo && (
+          <div className="mb-6 p-4 bg-muted rounded-lg">
+            <h3 className="font-semibold mb-2">Partner Information</h3>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div><strong>Name:</strong> {partnerInfo.first_name} {partnerInfo.last_name}</div>
+              <div><strong>Email:</strong> {partnerInfo.email}</div>
+              <div><strong>UID:</strong> {partnerInfo.uid}</div>
+              <div><strong>Status:</strong> {partnerInfo.is_active ? "Active" : "Inactive"}</div>
+            </div>
           </div>
-        </div>
-        
-        <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
-          <DollarSign className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium text-foreground">
-            {name || "Commission Config"}
-          </span>
-        </div>
-      </div>
-
-      {error && (
-        <Card className="minimal-card">
-          <CardContent className="p-6">
-            <ErrorDisplay error={error} />
-          </CardContent>
-        </Card>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Commission Config Information */}
-        <Card className="minimal-card hover-lift">
-          <CardHeader className="border-b border-border/50">
-            <CardTitle className="flex items-center gap-3 text-xl font-semibold">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <DollarSign className="h-5 w-5 text-primary" />
-              </div>
-              <span>Commission Config Information</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-medium text-foreground">
-                  Config Name *
-                </Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="ex: Standard Commission, Premium Commission"
-                  className="minimal-input"
-                  variant="minimal"
-                  required
-                />
-                <p className="text-xs text-muted-foreground">
-                  The display name of the commission configuration
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="rate" className="text-sm font-medium text-foreground">
-                  Commission Rate (%) *
-                </Label>
-                <Input
-                  id="rate"
-                  type="number"
-                  value={rate}
-                  onChange={(e) => setRate(e.target.value)}
-                  placeholder="ex: 5.5"
-                  className="minimal-input"
-                  variant="minimal"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  required
-                />
-                <p className="text-xs text-muted-foreground">
-                  Commission rate as a percentage (0-100)
-                </p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="minAmount" className="text-sm font-medium text-foreground">
-                  Minimum Amount ($)
-                </Label>
-                <Input
-                  id="minAmount"
-                  type="number"
-                  value={minAmount}
-                  onChange={(e) => setMinAmount(e.target.value)}
-                  placeholder="ex: 100"
-                  className="minimal-input"
-                  variant="minimal"
-                  min="0"
-                  step="0.01"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Minimum transaction amount for this config
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="maxAmount" className="text-sm font-medium text-foreground">
-                  Maximum Amount ($)
-                </Label>
-                <Input
-                  id="maxAmount"
-                  type="number"
-                  value={maxAmount}
-                  onChange={(e) => setMaxAmount(e.target.value)}
-                  placeholder="ex: 10000"
-                  className="minimal-input"
-                  variant="minimal"
-                  min="0"
-                  step="0.01"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Maximum transaction amount for this config
-                </p>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="description" className="text-sm font-medium text-foreground">
-                Description
-              </Label>
-              <Input
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Commission config description..."
-                className="minimal-input"
-                variant="minimal"
-              />
-              <p className="text-xs text-muted-foreground">
-                Optional description of the commission config
-              </p>
-            </div>
-            
-            <div className="flex items-center justify-between p-4 bg-accent/30 rounded-lg">
-              <div className="space-y-1">
-                <Label htmlFor="isActive" className="text-sm font-medium text-foreground">
-                  Config Status
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Enable this config so it's available in the system
-                </p>
-              </div>
-              <Switch
-                id="isActive"
-                checked={isActive}
-                onCheckedChange={setIsActive}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Preview Card */}
-        {(name || rate) && (
-          <Card className="minimal-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                Preview
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4 p-4 bg-accent/20 rounded-lg">
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-foreground">
-                    {name || "Commission Config"}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Rate: {rate ? `${rate}%` : "0%"}
-                  </p>
-                  {(minAmount || maxAmount) && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Range: ${minAmount || 0} - ${maxAmount || 0}
-                    </p>
-                  )}
-                </div>
-                <Badge variant={isActive ? "default" : "secondary"}>
-                  {isActive ? "Active" : "Inactive"}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
         )}
 
-        {/* Action Buttons */}
-        <div className="flex items-center justify-between pt-6 border-t border-border/50">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => router.back()}
-            className="hover-lift"
-          >
-            Cancel
-          </Button>
-          <Button 
-            type="submit" 
-            disabled={saving || !name || !rate}
-            className="min-w-[140px] hover-lift"
-          >
-            {saving ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Save Changes
-              </>
-            )}
-          </Button>
-        </div>
-      </form>
-    </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Commission Rates */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="deposit_rate">Deposit Commission Rate (%)</Label>
+              <Input
+                id="deposit_rate"
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                value={depositCommissionRate}
+                onChange={(e) => setDepositCommissionRate(e.target.value)}
+                placeholder="0.00"
+                required
+              />
+              <p className="text-sm text-muted-foreground">
+                Percentage commission for deposit transactions (e.g., 2.50)
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="withdrawal_rate">Withdrawal Commission Rate (%)</Label>
+              <Input
+                id="withdrawal_rate"
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                value={withdrawalCommissionRate}
+                onChange={(e) => setWithdrawalCommissionRate(e.target.value)}
+                placeholder="0.00"
+                required
+              />
+              <p className="text-sm text-muted-foreground">
+                Percentage commission for withdrawal transactions (e.g., 3.00)
+              </p>
+            </div>
+          </div>
+
+          {/* Rate Recommendations */}
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Commission Rate Guidelines:</h4>
+            <div className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+              <div><strong>Deposit Rates:</strong></div>
+              <div>• Standard: 2.0% - 2.5%</div>
+              <div>• High Volume: 1.5% - 2.0%</div>
+              <div>• Premium Partners: 1.0% - 1.5%</div>
+              <div className="mt-2"><strong>Withdrawal Rates:</strong></div>
+              <div>• Standard: 3.0% - 3.5%</div>
+              <div>• High Volume: 2.5% - 3.0%</div>
+              <div>• Premium Partners: 2.0% - 2.5%</div>
+            </div>
+          </div>
+
+          {error && (
+            <ErrorDisplay
+              error={error}
+              variant="inline"
+              showRetry={false}
+              className="mb-4"
+            />
+          )}
+
+          <div className="flex gap-4">
+            <Button type="submit" disabled={loading}>
+              {loading ? `${hasConfig ? "Updating" : "Creating"}...` : `${hasConfig ? "Update" : "Create"} Configuration`}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => router.push("/dashboard/partner")}>
+              Back to Partners
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => router.push("/dashboard/commission-config/list")}>
+              View All Configs
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   )
 }

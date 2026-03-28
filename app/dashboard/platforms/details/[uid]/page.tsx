@@ -8,15 +8,41 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from "@/components/ui/dialog"
-import { Copy, Edit, ArrowLeft, BarChart3, Users, CreditCard, TrendingUp, TrendingDown, Gamepad2 } from "lucide-react"
-import { getImageUrl } from "@/lib/utils"
+import { Copy, Edit, ArrowLeft, BarChart3, Users, CreditCard, TrendingUp, TrendingDown } from "lucide-react"
 import { useApi } from "@/lib/useApi"
 import { useLanguage } from "@/components/providers/language-provider"
 import { useToast } from "@/hooks/use-toast"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
 import Link from "next/link"
 
-import { formatApiDateTime } from "@/lib/utils";
+import { formatApiDateTime, getImageUrl } from "@/lib/utils";
+interface Platform {
+  uid: string;
+  name: string;
+  logo?: string | null;
+  is_active: boolean;
+  external_id: string;
+  description?: string | null;
+  min_deposit_amount: string;
+  max_deposit_amount: string;
+  min_withdrawal_amount: string;
+  max_withdrawal_amount: string;
+  created_by_name?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  active_partners_count?: number;
+}
+
+interface PlatformStats {
+  total_transactions: number;
+  successful_transactions: number;
+  failed_transactions: number;
+  active_partners: number;
+  pending_transactions: number;
+  total_volume: string | number;
+  total_commissions: string | number;
+}
+
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
 export default function PlatformDetailsPage() {
@@ -28,8 +54,8 @@ export default function PlatformDetailsPage() {
   
   const uid = params.uid as string
   
-  const [platform, setPlatform] = useState<any | null>(null)
-  const [stats, setStats] = useState<any | null>(null)
+  const [platform, setPlatform] = useState<Platform | null>(null)
+  const [stats, setStats] = useState<PlatformStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [togglingStatus, setTogglingStatus] = useState(false)
@@ -45,12 +71,12 @@ export default function PlatformDetailsPage() {
       
       try {
         // Fetch platform details
-        const platformData = await apiFetch(`${baseUrl}/api/payments/betting/admin/platforms/${uid}/`)
+        const platformData = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/betting/admin/platforms/${uid}/`)
         setPlatform(platformData)
         
         // Fetch platform statistics
         try {
-          const statsData = await apiFetch(`${baseUrl}/api/payments/betting/admin/platforms/${uid}/stats/`)
+          const statsData = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/betting/admin/platforms/${uid}/stats/`)
           setStats(statsData)
         } catch (statsErr) {
           console.warn("Could not fetch platform statistics:", statsErr)
@@ -79,11 +105,11 @@ export default function PlatformDetailsPage() {
     
     setTogglingStatus(true)
     try {
-      const data = await apiFetch(`${baseUrl}/api/payments/betting/admin/platforms/${platform.uid}/toggle_status/`, {
+      const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/betting/admin/platforms/${platform.uid}/toggle_status/`, {
         method: "PATCH",
       })
       
-      setPlatform(prev => prev ? { ...prev, is_active: data.is_active } : prev)
+      setPlatform((prev: Platform | null) => prev ? { ...prev, is_active: data.is_active } : prev)
       // Success toast is automatically shown by useApi hook for non-GET requests
     } catch (err: any) {
       toast({
@@ -148,25 +174,27 @@ export default function PlatformDetailsPage() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             {t("platforms.backToPlatforms")}
           </Button>
-          <div className="h-16 w-16 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/10">
+          <div className="h-16 w-16 border rounded-full overflow-hidden bg-muted flex items-center justify-center">
             {platform.logo ? (
               <img 
                 src={getImageUrl(platform.logo) || ""} 
                 alt={platform.name} 
-                className="h-full w-full object-contain p-2"
+                className="h-full w-full object-contain"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                   const parent = e.currentTarget.parentElement;
                   if (parent) {
                     const fallback = document.createElement('div');
-                    fallback.className = "flex items-center justify-center w-full h-full bg-primary/10 text-primary font-bold text-2xl";
-                    fallback.innerText = platform.name ? platform.name[0].toUpperCase() : "P";
+                    fallback.className = "flex h-full w-full items-center justify-center bg-primary text-primary-foreground font-bold text-xl";
+                    fallback.innerText = platform.name[0] || "?";
                     parent.appendChild(fallback);
                   }
                 }}
               />
             ) : (
-              <Gamepad2 className="h-8 w-8 text-primary opacity-40" />
+              <div className="flex h-full w-full items-center justify-center bg-primary text-primary-foreground font-bold text-xl">
+                {platform.name[0] || "?"}
+              </div>
             )}
           </div>
           <div>

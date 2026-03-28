@@ -17,7 +17,6 @@ import { useApi } from "@/lib/useApi"
 import Link from "next/link"
 
 import { formatApiDateTime } from "@/lib/utils";
-
 export default function CommissionConfigListPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
@@ -53,6 +52,7 @@ export default function CommissionConfigListPage() {
           params.append("search", searchTerm)
         }
 
+        // Add sorting
         let ordering = ""
         if (sortField === "partner_name") {
           ordering = `${sortDirection === "asc" ? "" : "-"}partner_name`
@@ -64,7 +64,7 @@ export default function CommissionConfigListPage() {
           params.append("ordering", ordering)
         }
 
-        const endpoint = `${baseUrl}/api/payments/betting/admin/commission-configs/?${params.toString()}`
+        const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/betting/admin/commission-configs/?${params.toString()}`
         const data = await apiFetch(endpoint)
         
         setConfigs(data.results || [])
@@ -72,8 +72,8 @@ export default function CommissionConfigListPage() {
         setTotalPages(Math.ceil((data.count || 0) / itemsPerPage))
         
         toast({
-          title: t("common.success") || "Success",
-          description: t("commission.loaded"),
+          title: "Commission configs loaded",
+          description: "Commission configurations loaded successfully",
         })
       } catch (err: any) {
         const errorMessage = extractErrorMessages(err)
@@ -82,7 +82,7 @@ export default function CommissionConfigListPage() {
         setTotalCount(0)
         setTotalPages(1)
         toast({
-          title: t("common.error") || "Error",
+          title: "Failed to load commission configs",
           description: errorMessage,
           variant: "destructive",
         })
@@ -102,6 +102,7 @@ export default function CommissionConfigListPage() {
     }
   }
 
+  // Fetch config details
   const handleOpenDetail = (config: any) => {
     setDetailModalOpen(true)
     setSelectedConfig(config)
@@ -135,6 +136,7 @@ export default function CommissionConfigListPage() {
           </Link>
         </CardHeader>
         <CardContent>
+          {/* Search Controls */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -150,9 +152,10 @@ export default function CommissionConfigListPage() {
             </div>
           </div>
 
+          {/* Table */}
           <div className="rounded-md border">
             {loading ? (
-              <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>
+              <div className="p-8 text-center text-muted-foreground">Loading...</div>
             ) : error ? (
               <ErrorDisplay
                 error={error}
@@ -167,7 +170,7 @@ export default function CommissionConfigListPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t("common.uid") || "UID"}</TableHead>
+                    <TableHead>UID</TableHead>
                       <TableHead>
                       <Button variant="ghost" onClick={() => handleSort("partner_name")} className="h-auto p-0 font-semibold">
                         {t("commission.partner")}
@@ -200,7 +203,7 @@ export default function CommissionConfigListPage() {
                             className="h-5 w-5"
                             onClick={() => {
                               navigator.clipboard.writeText(config.uid)
-                              toast({ title: t("common.uidCopied") || "UID copied!" })
+                              toast({ title: "UID copied!" })
                             }}
                           >
                             <Copy className="h-4 w-4" />
@@ -247,9 +250,13 @@ export default function CommissionConfigListPage() {
             )}
           </div>
 
+          {/* Pagination */}
           <div className="flex items-center justify-between mt-6">
             <div className="text-sm text-muted-foreground">
-              {t("common.showing") || "Showing"}: {startIndex + 1}-{Math.min(startIndex + itemsPerPage, totalCount)} {t("common.of") || "of"} {totalCount}
+              Showing: {startIndex + 1}-{Math.min(startIndex + itemsPerPage, totalCount)} of {totalCount}
+            </div>
+            <div className="text-sm">
+              Page {currentPage} of {totalPages}
             </div>
             <div className="flex items-center space-x-2">
               <Button
@@ -259,18 +266,15 @@ export default function CommissionConfigListPage() {
                 disabled={currentPage === 1}
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
-                {t("common.previous") || "Previous"}
+                Previous
               </Button>
-              <div className="text-sm">
-                {t("common.page") || "Page"} {currentPage} {t("common.of") || "of"} {totalPages}
-              </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
               >
-                {t("common.next") || "Next"}
+                Next
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
@@ -278,6 +282,7 @@ export default function CommissionConfigListPage() {
         </CardContent>
       </Card>
 
+      {/* Commission Config Details Modal */}
       <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -287,32 +292,32 @@ export default function CommissionConfigListPage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <strong>{t("common.uid") || "UID"}:</strong> {selectedConfig.uid}
+                  <strong>UID:</strong> {selectedConfig.uid}
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-5 w-5"
                     onClick={() => {
                       navigator.clipboard.writeText(selectedConfig.uid)
-                      toast({ title: t("common.uidCopied") || "UID copied!" })
+                      toast({ title: "UID copied!" })
                     }}
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
                 </div>
-                <div><strong>{t("commission.partner")}:</strong> {selectedConfig.partner_name}</div>
-                <div><strong>{t("permissions.partnerId") || "Partner ID"}:</strong> {selectedConfig.partner}</div>
+                <div><strong>Partner:</strong> {selectedConfig.partner_name}</div>
+                <div><strong>Partner ID:</strong> {selectedConfig.partner}</div>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">{t("commission.depositRate")}</Label>
+                  <Label className="text-sm font-medium">Deposit Commission</Label>
                   <div className="flex items-center gap-2">
                     {getRateBadge(selectedConfig.deposit_commission_rate, "deposit")}
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">{t("commission.withdrawRate")}</Label>
+                  <Label className="text-sm font-medium">Withdrawal Commission</Label>
                   <div className="flex items-center gap-2">
                     {getRateBadge(selectedConfig.withdrawal_commission_rate, "withdrawal")}
                   </div>
@@ -320,9 +325,9 @@ export default function CommissionConfigListPage() {
               </div>
 
               <div className="space-y-2">
-                <div><strong>{t("platforms.createdAtLabel") || "Created"}:</strong> {selectedConfig.created_at ? formatApiDateTime(selectedConfig.created_at) : t("platforms.unknown")}</div>
-                <div><strong>{t("platforms.updatedAt") || "Updated"}:</strong> {selectedConfig.updated_at ? formatApiDateTime(selectedConfig.updated_at) : t("platforms.unknown")}</div>
-                <div><strong>{t("commission.updatedBy")}:</strong> {selectedConfig.updated_by_name || t("platforms.unknown")}</div>
+                <div><strong>Created:</strong> {selectedConfig.created_at ? formatApiDateTime(selectedConfig.created_at) : "Unknown"}</div>
+                <div><strong>Updated:</strong> {selectedConfig.updated_at ? formatApiDateTime(selectedConfig.updated_at) : "Unknown"}</div>
+                <div><strong>Updated by:</strong> {selectedConfig.updated_by_name || "Unknown"}</div>
               </div>
             </div>
           ) : null}
@@ -336,4 +341,3 @@ export default function CommissionConfigListPage() {
     </>
   )
 }
-

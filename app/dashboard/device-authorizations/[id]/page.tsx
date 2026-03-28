@@ -45,7 +45,7 @@ export default function DeviceAuthorizationDetailPage() {
     setLoading(true)
     setError("")
     try {
-      const data = await apiFetch(`${baseUrl}/api/payments/betting/admin/device-authorizations/${authorizationId}/`)
+      const data = await apiFetch(`${baseUrl}api/payments/betting/admin/device-authorizations/${authorizationId}/`)
       console.log('Device Authorization API response:', data)
       setAuthorization(data)
       setFormData({
@@ -74,7 +74,7 @@ export default function DeviceAuthorizationDetailPage() {
     
     try {
       setSaving(true)
-      const response = await apiFetch(`${baseUrl}/api/payments/betting/admin/device-authorizations/${authorization.uid}/`, {
+      const response = await apiFetch(`${baseUrl}api/payments/betting/admin/device-authorizations/${authorization.uid}/`, {
         method: 'PATCH',
         body: JSON.stringify({
           is_active: formData.is_active,
@@ -112,7 +112,7 @@ export default function DeviceAuthorizationDetailPage() {
     
     try {
       setToggleLoading(true)
-      const response = await apiFetch(`${baseUrl}/api/payments/betting/admin/device-authorizations/${authorization.uid}/toggle_active/`, {
+      const response = await apiFetch(`${baseUrl}api/payments/betting/admin/device-authorizations/${authorization.uid}/toggle_active/`, {
         method: 'POST',
         body: JSON.stringify({
           is_active: !authorization.is_active,
@@ -197,7 +197,7 @@ export default function DeviceAuthorizationDetailPage() {
             {t("common.back") || "Back"}
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">{t("deviceAuthorizations.detail") || "YapsonPress Device Authorization Detail"}</h1>
+            <h1 className="text-2xl font-bold">{t("deviceAuthorizations.detail") || "sms Device Authorization Detail"}</h1>
             <p className="text-gray-600 dark:text-gray-400">UID: {authorization.uid}</p>
           </div>
         </div>

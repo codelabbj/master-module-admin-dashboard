@@ -1,70 +1,115 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { useApi } from "@/lib/useApi"
 import { useLanguage } from "@/components/providers/language-provider"
 import { useToast } from "@/hooks/use-toast"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
-import { ArrowLeft, Save, Loader2, Gamepad2, CheckCircle, Plus, Image as ImageIcon } from "lucide-react"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+const yapsonUrl = "https://api.yapson.net/yapson/app_name?type=yapson"
 
 export default function PlatformCreatePage() {
   const [name, setName] = useState("")
-  const [code, setCode] = useState("")
+  const [externalId, setExternalId] = useState("")
+  const [minDepositAmount, setMinDepositAmount] = useState("")
+  const [maxDepositAmount, setMaxDepositAmount] = useState("")
+  const [minWithdrawalAmount, setMinWithdrawalAmount] = useState("")
+  const [maxWithdrawalAmount, setMaxWithdrawalAmount] = useState("")
   const [description, setDescription] = useState("")
   const [isActive, setIsActive] = useState(true)
+  const [logoFile, setLogoFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [yapsonApps, setYapsonApps] = useState<any[]>([])
+  const [yapsonLoading, setYapsonLoading] = useState(false)
+  
   const router = useRouter()
   const apiFetch = useApi()
   const { t } = useLanguage()
-  const { toast } = useToast();
+  const { toast } = useToast()
 
-  const handleSubmit = async (e: any) => {
+  // Fetch Yapson apps for external ID selection
+  useEffect(() => {
+    const fetchYapsonApps = async () => {
+      setYapsonLoading(true)
+      try {
+        const response = await fetch(yapsonUrl)
+        const data = await response.json()
+        // Ensure data is an array
+        setYapsonApps(Array.isArray(data) ? data : [])
+      } catch (err) {
+        console.error("Failed to fetch Yapson apps:", err)
+        toast({
+          title: t("common.warning"),
+          description: t("commissionPayments.couldNotLoadExternalPlatformOptions"),
+          variant: "destructive",
+        })
+      } finally {
+        setYapsonLoading(false)
+      }
+    }
+    fetchYapsonApps()
+  }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError("")
+    
     try {
-      let body
-      const headers: Record<string, string> = {}
-      
+      let body: any;
+      let headers: Record<string, string> = {};
+
       if (logoFile) {
-        const formData = new FormData()
-        formData.append("name", name)
-        formData.append("code", code)
-        formData.append("description", description)
-        formData.append("is_active", String(isActive))
-        formData.append("logo", logoFile)
-        body = formData
+        const formData = new FormData();
+        formData.append("name", name.trim());
+        formData.append("external_id", externalId.trim());
+        formData.append("min_deposit_amount", (parseFloat(minDepositAmount) || 0).toString());
+        formData.append("max_deposit_amount", (parseFloat(maxDepositAmount) || 0).toString());
+        formData.append("min_withdrawal_amount", (parseFloat(minWithdrawalAmount) || 0).toString());
+        formData.append("max_withdrawal_amount", (parseFloat(maxWithdrawalAmount) || 0).toString());
+        formData.append("description", description.trim());
+        formData.append("is_active", isActive.toString());
+        formData.append("logo", logoFile);
+        body = formData;
+        // Don't set Content-Type header for FormData, browser does it automatically with boundary
       } else {
-        body = JSON.stringify({ name, code, description, is_active: isActive })
-        headers["Content-Type"] = "application/json"
+        const payload = {
+          name: name.trim(),
+          external_id: externalId.trim(),
+          min_deposit_amount: parseFloat(minDepositAmount) || 0,
+          max_deposit_amount: parseFloat(maxDepositAmount) || 0,
+          min_withdrawal_amount: parseFloat(minWithdrawalAmount) || 0,
+          max_withdrawal_amount: parseFloat(maxWithdrawalAmount) || 0,
+          description: description.trim(),
+          is_active: isActive,
+        }
+        body = JSON.stringify(payload);
+        headers["Content-Type"] = "application/json";
       }
 
-      await apiFetch(`${baseUrl}/api/platforms/`, {
+      await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/betting/admin/platforms/`, {
         method: "POST",
         headers,
-        body
+        body,
       })
-      toast({
-        title: t("platforms.created"),
-        description: t("platforms.createdSuccessfully"),
-      })
+      // Success toast is automatically shown by useApi hook for non-GET requests
+      
       router.push("/dashboard/platforms/list")
     } catch (err: any) {
-      const errorMessage = extractErrorMessages(err) || t("platforms.failedToCreate")
+      const errorMessage = extractErrorMessages(err)
       setError(errorMessage)
       toast({
-        title: t("platforms.failedToCreate"),
+        title: t("platforms.failedToCreatePlatform"),
         description: errorMessage,
         variant: "destructive",
       })
@@ -73,241 +118,217 @@ export default function PlatformCreatePage() {
     }
   }
 
-  return (
-    <div className="space-y-8">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="outline" 
-            onClick={() => router.back()}
-            className="flex items-center gap-2 hover-lift"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-4xl font-bold text-gradient">
-              Create Platform
-            </h1>
-            <p className="text-muted-foreground mt-2 text-lg">
-              Add a new platform configuration to the system
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
-          <Gamepad2 className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium text-foreground">
-            New Platform
-          </span>
-        </div>
+  const handleYapsonAppSelect = (app: any) => {
+    setName(app.name)
+    setExternalId(app.id)
+    setDescription(app.public_name ? `${app.public_name} - Sports betting platform` : `${app.name} - Sports betting platform`)
+    setIsActive(app.is_active)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <span className="text-lg font-semibold">{t("platforms.creating")}</span>
       </div>
+    )
+  }
 
-      {error && (
-        <Card className="minimal-card">
-          <CardContent className="p-6">
-            <ErrorDisplay error={error} />
-          </CardContent>
-        </Card>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Platform Information */}
-        <Card className="minimal-card hover-lift">
-          <CardHeader className="border-b border-border/50">
-            <CardTitle className="flex items-center gap-3 text-xl font-semibold">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Gamepad2 className="h-5 w-5 text-primary" />
-              </div>
-              <span>Platform Information</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-medium text-foreground">
-                  Platform Name *
-                </Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="ex: Gaming Platform, Betting System"
-                  className="minimal-input"
-                  variant="minimal"
-                  required
-                />
-                <p className="text-xs text-muted-foreground">
-                  The display name of the platform as it will appear in the interface
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="code" className="text-sm font-medium text-foreground">
-                  Platform Code *
-                </Label>
-                <Input
-                  id="code"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  placeholder="ex: GP, BS"
-                  className="minimal-input font-mono"
-                  variant="minimal"
-                  maxLength={10}
-                  required
-                />
-                <p className="text-xs text-muted-foreground">
-                  Unique code to identify the platform in the system
-                </p>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="description" className="text-sm font-medium text-foreground">
-                Description
-              </Label>
-              <Input
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Platform description..."
-                className="minimal-input"
-                variant="minimal"
-              />
-              <p className="text-xs text-muted-foreground">
-                Optional description of the platform
-              </p>
-            </div>
-            
-            <div className="flex items-center justify-between p-4 bg-accent/30 rounded-lg">
-              <div className="space-y-1">
-                <Label htmlFor="isActive" className="text-sm font-medium text-foreground">
-                  Platform Status
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Enable this platform so it's available in the system
-                </p>
-              </div>
-              <Switch
-                onCheckedChange={setIsActive}
-              />
-            </div>
-            
-            <div className="space-y-4 pt-4 border-t border-border/50">
-              <Label htmlFor="logo" className="text-sm font-medium text-foreground">
-                Platform Logo
-              </Label>
-              <div className="flex items-center gap-6">
-                <div className="relative h-28 w-28 rounded-xl border-2 border-dashed border-muted-foreground/20 bg-muted/30 flex items-center justify-center overflow-hidden transition-all hover:border-primary/50">
-                  {logoFile ? (
-                    <img 
-                      src={URL.createObjectURL(logoFile)} 
-                      alt="Logo preview" 
-                      className="h-full w-full object-contain p-2"
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                      <ImageIcon className="h-8 w-8 opacity-20" />
-                      <span className="text-[10px] font-medium uppercase tracking-wider">No Image</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 space-y-3">
-                  <Input
-                    id="logo"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-                    className="minimal-input h-10 cursor-pointer"
-                    variant="minimal"
-                  />
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">
-                      PNG, JPG or SVG formats accepted. Max size 2MB.
-                    </p>
-                    <p className="text-xs font-medium text-primary/70">
-                      Recommendation: 512x512px with transparent background.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Preview Card */}
-        {(name || code) && (
-          <Card className="minimal-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                Preview
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4 p-4 bg-accent/20 rounded-lg">
-                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20">
-                  {logoFile ? (
-                    <img 
-                      src={URL.createObjectURL(logoFile)} 
-                      alt="Logo preview" 
-                      className="h-full w-full object-contain p-1"
-                    />
-                  ) : (
-                    <Gamepad2 className="h-6 w-6 text-primary" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-foreground">
-                    {name || "Platform Name"}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Code: {code || "CODE"}
-                  </p>
-                  {description && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {description}
-                    </p>
-                  )}
-                </div>
-                <Badge variant={isActive ? "default" : "secondary"}>
-                  {isActive ? "Active" : "Inactive"}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Action Buttons */}
-        <div className="flex items-center justify-between pt-6 border-t border-border/50">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => router.back()}
-            className="hover-lift"
-          >
-            Cancel
-          </Button>
-          <Button 
-            type="submit" 
-            disabled={loading || !name || !code}
-            className="min-w-[140px] hover-lift"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Creating...
-              </>
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("platforms.createPlatform")}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Yapson App Selection */}
+          <div className="space-y-4">
+            <Label>{t("platforms.quickSelectYapsonApps")}</Label>
+            {yapsonLoading ? (
+              <div className="text-sm text-muted-foreground">{t("commissionPayments.loadingAvailableApps")}</div>
             ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Create Platform
-              </>
+              <Select
+                onValueChange={(appId) => {
+                  if (Array.isArray(yapsonApps)) {
+                    const app = yapsonApps.find(a => a.id === appId)
+                    if (app) handleYapsonAppSelect(app)
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("commissionPayments.selectPlatformToAutoFill") || t("commissionPayments.choosePlatformToAutoFill")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.isArray(yapsonApps) && yapsonApps.map((app) => (
+                    <SelectItem key={app.id} value={app.id}>
+                      <div className="flex items-center gap-2">
+                        {app.image && (
+                          <img src={app.image} alt={app.name} className="w-6 h-6 object-cover rounded" />
+                        )}
+                        {app.name} ({app.public_name})
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
-          </Button>
-        </div>
-      </form>
-    </div>
+          </div>
+
+          {/* Logo Upload */}
+          <div className="space-y-2">
+            <Label htmlFor="logo">{t("platforms.logo") || "Platform Logo"}</Label>
+            <div className="flex flex-col gap-4">
+              {logoFile && (
+                <div className="relative h-24 w-24 border rounded overflow-hidden bg-muted flex items-center justify-center">
+                  <img 
+                    src={URL.createObjectURL(logoFile)} 
+                    alt="Preview" 
+                    className="h-full w-full object-contain"
+                  />
+                  <Button 
+                    type="button" 
+                    variant="destructive" 
+                    size="icon" 
+                    className="absolute top-0 right-0 h-6 w-6 rounded-none rounded-bl"
+                    onClick={() => setLogoFile(null)}
+                  >
+                    ×
+                  </Button>
+                </div>
+              )}
+              <Input 
+                id="logo"
+                type="file" 
+                accept="image/*" 
+                onChange={(e) => setLogoFile(e.target.files?.[0] || null)} 
+                className="cursor-pointer"
+              />
+            </div>
+          </div>
+
+          {/* Basic Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">{t("platforms.platformName")} *</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t("platforms.platformNamePlaceholder")}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="external_id">{t("platforms.externalIdLabel")} *</Label>
+              <Input
+                id="external_id"
+                value={externalId}
+                onChange={(e) => setExternalId(e.target.value)}
+                placeholder={t("platforms.externalIdPlaceholder")}
+                required
+              />
+            </div>
+          </div>
+
+          {/* Deposit Limits */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="min_deposit">{t("platforms.minimumDepositAmount")}</Label>
+              <Input
+                id="min_deposit"
+                type="number"
+                step="0.01"
+                min="0"
+                value={minDepositAmount}
+                onChange={(e) => setMinDepositAmount(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="max_deposit">{t("platforms.maximumDepositAmount")}</Label>
+              <Input
+                id="max_deposit"
+                type="number"
+                step="0.01"
+                min="0"
+                value={maxDepositAmount}
+                onChange={(e) => setMaxDepositAmount(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+
+          {/* Withdrawal Limits */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="min_withdrawal">{t("platforms.minimumWithdrawalAmount")}</Label>
+              <Input
+                id="min_withdrawal"
+                type="number"
+                step="0.01"
+                min="0"
+                value={minWithdrawalAmount}
+                onChange={(e) => setMinWithdrawalAmount(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="max_withdrawal">{t("platforms.maximumWithdrawalAmount")}</Label>
+              <Input
+                id="max_withdrawal"
+                type="number"
+                step="0.01"
+                min="0"
+                value={maxWithdrawalAmount}
+                onChange={(e) => setMaxWithdrawalAmount(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <Label htmlFor="description">{t("platforms.description")}</Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder={t("platforms.descriptionPlaceholder")}
+              rows={3}
+            />
+          </div>
+
+          {/* Status */}
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="is_active"
+              checked={isActive}
+              onCheckedChange={setIsActive}
+            />
+            <Label htmlFor="is_active">{t("platforms.activePlatform")}</Label>
+          </div>
+
+          {error && (
+            <ErrorDisplay
+              error={error}
+              variant="inline"
+              showRetry={false}
+              className="mb-4"
+            />
+          )}
+
+          <div className="flex gap-4">
+            <Button type="submit" disabled={loading}>
+              {loading ? t("platforms.creating") : t("platforms.createPlatform")}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => router.push("/dashboard/platforms/list")}>
+              {t("common.cancel")}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   )
 }
-

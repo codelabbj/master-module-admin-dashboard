@@ -15,11 +15,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
 import { useApi } from "@/lib/useApi"
 import Link from "next/link"
-import { getImageUrl } from "@/lib/utils"
-import { Gamepad2 } from "lucide-react"
 
-import { formatApiDateTime } from "@/lib/utils";
-
+import { formatApiDateTime, getImageUrl } from "@/lib/utils";
 export default function PlatformListPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -78,7 +75,7 @@ export default function PlatformListPage() {
           params.append("created_at__lt", endDateObj.toISOString().split('T')[0])
         }
 
-        const endpoint = `${baseUrl}/api/payments/betting/admin/platforms/?${params.toString()}`
+        const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/betting/admin/platforms/?${params.toString()}`
         const data = await apiFetch(endpoint)
         
         setPlatforms(data.results || [])
@@ -122,8 +119,9 @@ export default function PlatformListPage() {
     setDetailLoading(true)
     setSelectedPlatform(null)
     try {
-      const data = await apiFetch(`${baseUrl}/api/payments/betting/admin/platforms/${platform.uid}/`)
+      const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/betting/admin/platforms/${platform.uid}/`)
       setSelectedPlatform(data)
+      // GET requests don't show success toasts automatically
     } catch (err: any) {
       toast({
         title: t("platforms.failedToLoadPlatform"),
@@ -141,8 +139,9 @@ export default function PlatformListPage() {
     setStatsLoading(true)
     setPlatformStats(null)
     try {
-      const data = await apiFetch(`${baseUrl}/api/payments/betting/admin/platforms/${platform.uid}/stats/`)
+      const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/betting/admin/platforms/${platform.uid}/stats/`)
       setPlatformStats(data)
+      // GET requests don't show success toasts automatically
     } catch (err: any) {
       toast({
         title: t("platforms.failedToLoad") || "Failed to load platform statistics",
@@ -158,15 +157,17 @@ export default function PlatformListPage() {
   const handleToggleStatus = async (platform: any) => {
     setTogglingStatus(platform.uid)
     try {
-      const data = await apiFetch(`${baseUrl}/api/payments/betting/admin/platforms/${platform.uid}/toggle_status/`, {
+      const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/betting/admin/platforms/${platform.uid}/toggle_status/`, {
         method: "PATCH",
       })
       
+      // Update the platform in the list
       setPlatforms(prev => prev.map(p => 
         p.uid === platform.uid 
           ? { ...p, is_active: data.is_active }
           : p
       ))
+      // Success toast is automatically shown by useApi hook for non-GET requests
     } catch (err: any) {
       toast({
         title: t("platforms.failedToUpdatePlatformStatus"),
@@ -190,6 +191,7 @@ export default function PlatformListPage() {
           </Link>
         </CardHeader>
         <CardContent>
+          {/* Search and Filter Controls */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -215,6 +217,7 @@ export default function PlatformListPage() {
             </Select>
           </div>
 
+          {/* Date Filters */}
           <div className="flex flex-col lg:flex-row gap-4 mb-6">
             <div className="flex flex-col lg:flex-row gap-4 flex-1">
               <div className="flex flex-col gap-2">
@@ -261,6 +264,7 @@ export default function PlatformListPage() {
             </div>
           </div>
 
+          {/* Table */}
           <div className="rounded-md border">
             {loading ? (
               <div className="p-8 text-center text-muted-foreground">{t("platforms.loading") || t("common.loading")}</div>
@@ -279,13 +283,13 @@ export default function PlatformListPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>UID</TableHead>
+                    <TableHead>{t("platforms.logo") || "Logo"}</TableHead>
                     <TableHead>
                       <Button variant="ghost" onClick={() => handleSort("name")} className="h-auto p-0 font-semibold">
                         {t("platforms.name")}
                         <ArrowUpDown className="ml-2 h-4 w-4" />
                       </Button>
                     </TableHead>
-                    <TableHead>{t("platforms.logo") || "Logo"}</TableHead>
                     <TableHead>{t("platforms.externalId")}</TableHead>
                     <TableHead>{t("platforms.status")}</TableHead>
                     <TableHead>{t("platforms.minDeposit")}</TableHead>
@@ -305,9 +309,7 @@ export default function PlatformListPage() {
                     <TableRow key={platform.uid}>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <code className="px-1 py-0.5 bg-muted rounded text-xs">
-                            {platform.uid.slice(0, 8)}...
-                          </code>
+                          {platform.uid}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -321,40 +323,39 @@ export default function PlatformListPage() {
                           </Button>
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium">{platform.name}</TableCell>
                       <TableCell>
-                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/5">
+                        <div className="h-10 w-10 border rounded overflow-hidden bg-muted flex items-center justify-center">
                           {platform.logo ? (
                             <img 
                               src={getImageUrl(platform.logo) || ""} 
                               alt={platform.name} 
-                              className="h-full w-full object-contain p-1" 
+                              className="h-full w-full object-contain"
                               onError={(e) => {
                                 e.currentTarget.style.display = 'none';
                                 const parent = e.currentTarget.parentElement;
                                 if (parent) {
                                   const fallback = document.createElement('div');
-                                  fallback.className = "flex items-center justify-center w-full h-full bg-primary/10 text-primary font-bold text-xs";
-                                  fallback.innerText = platform.name ? platform.name[0].toUpperCase() : "P";
+                                  fallback.className = "flex h-full w-full items-center justify-center bg-primary text-primary-foreground font-bold";
+                                  fallback.innerText = platform.name[0] || "?";
                                   parent.appendChild(fallback);
                                 }
                               }}
                             />
                           ) : (
-                            <Gamepad2 className="h-5 w-5 text-primary opacity-40" />
+                            <div className="flex h-full w-full items-center justify-center bg-primary text-primary-foreground font-bold">
+                              {platform.name[0] || "?"}
+                            </div>
                           )}
                         </div>
                       </TableCell>
+                      <TableCell className="font-medium">{platform.name}</TableCell>
                       <TableCell>{platform.external_id}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          {platform.is_active ? (
-                            <img src="/icon-yes.svg" alt="Active" className="h-4 w-4" />
-                          ) : (
-                            <img src="/icon-no.svg" alt="Inactive" className="h-4 w-4" />
-                          )}
-                          <span className="text-sm">{platform.is_active ? t("common.active") : t("common.inactive")}</span>
-                        </div>
+                        {platform.is_active ? (
+                          <img src="/icon-yes.svg" alt="Active" className="h-4 w-4" />
+                        ) : (
+                          <img src="/icon-no.svg" alt="Inactive" className="h-4 w-4" />
+                        )}
                       </TableCell>
                       <TableCell>{platform.min_deposit_amount}</TableCell>
                       <TableCell>{platform.max_deposit_amount}</TableCell>
@@ -395,7 +396,7 @@ export default function PlatformListPage() {
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                                   </svg>
-                                  {t("platforms.toggling") || "Toggling..."}
+                                  {t("platforms.toggling")}
                                 </span>
                               ) : platform.is_active ? (
                                 t("platforms.deactivate")
@@ -413,6 +414,7 @@ export default function PlatformListPage() {
             )}
           </div>
 
+          {/* Pagination */}
           <div className="flex items-center justify-between mt-6">
             <div className="text-sm text-muted-foreground">
               {t("common.showing") || "Showing"}: {startIndex + 1}-{Math.min(startIndex + itemsPerPage, totalCount)} {t("common.of") || "of"} {totalCount}
@@ -444,6 +446,7 @@ export default function PlatformListPage() {
         </CardContent>
       </Card>
 
+      {/* Platform Details Modal */}
       <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -453,37 +456,35 @@ export default function PlatformListPage() {
             <div className="p-4 text-center">{t("platforms.loadingPlatformDetails")}</div>
           ) : selectedPlatform ? (
             <div className="space-y-4">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="h-20 w-20 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/10">
+              <div className="flex justify-center mb-4">
+                <div className="h-24 w-24 border rounded-full overflow-hidden bg-muted flex items-center justify-center">
                   {selectedPlatform.logo ? (
                     <img 
                       src={getImageUrl(selectedPlatform.logo) || ""} 
                       alt={selectedPlatform.name} 
-                      className="h-full w-full object-contain p-2"
+                      className="h-full w-full object-contain"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
                         const parent = e.currentTarget.parentElement;
                         if (parent) {
                           const fallback = document.createElement('div');
-                          fallback.className = "flex items-center justify-center w-full h-full bg-primary/10 text-primary font-bold text-2xl";
-                          fallback.innerText = selectedPlatform.name ? selectedPlatform.name[0].toUpperCase() : "P";
+                          fallback.className = "flex h-full w-full items-center justify-center bg-primary text-primary-foreground font-bold text-2xl";
+                          fallback.innerText = selectedPlatform.name[0] || "?";
                           parent.appendChild(fallback);
                         }
                       }}
                     />
                   ) : (
-                    <Gamepad2 className="h-10 w-10 text-primary opacity-40" />
+                    <div className="flex h-full w-full items-center justify-center bg-primary text-primary-foreground font-bold text-2xl">
+                      {selectedPlatform.name[0] || "?"}
+                    </div>
                   )}
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold">{selectedPlatform.name}</h3>
-                  <p className="text-sm text-muted-foreground">{selectedPlatform.code || selectedPlatform.external_id}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <strong>UID:</strong> {selectedPlatform.uid}
+                    <strong>{t("platforms.name")}:</strong> {selectedPlatform.uid}
                     <Button
                       variant="ghost"
                       size="icon"
@@ -517,12 +518,13 @@ export default function PlatformListPage() {
               </div>
             </div>
           ) : null}
-          <div className="flex justify-end mt-4">
-            <Button onClick={() => setDetailModalOpen(false)}>{t("common.close")}</Button>
-          </div>
+          <DialogClose asChild>
+            <Button className="mt-4 w-full">{t("common.close")}</Button>
+          </DialogClose>
         </DialogContent>
       </Dialog>
 
+      {/* Platform Statistics Modal */}
       <Dialog open={statsModalOpen} onOpenChange={setStatsModalOpen}>
         <DialogContent>
           <DialogHeader>
@@ -545,12 +547,11 @@ export default function PlatformListPage() {
               </div>
             </div>
           ) : null}
-          <div className="flex justify-end mt-4">
-            <Button onClick={() => setStatsModalOpen(false)}>{t("common.close")}</Button>
-          </div>
+          <DialogClose asChild>
+            <Button className="mt-4 w-full">{t("common.close")}</Button>
+          </DialogClose>
         </DialogContent>
       </Dialog>
     </>
   )
 }
-
