@@ -135,6 +135,7 @@ export default function CommissionPaymentsPage() {
         body: JSON.stringify({
           partner_uid: selectedPartner,
           transaction_ids: null,
+          amount: null,
           admin_notes: paymentNotes || "Commission payment",
         }),
       })
