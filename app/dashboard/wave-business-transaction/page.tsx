@@ -499,7 +499,7 @@ export default function WaveBusinessTransactionPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => copyToClipboard(transaction.uid)}
+                            onClick={() => copyToClipboard(transaction.uid, `action-uid-${transaction.uid}`)}
                           >
                             <Copy className="h-4 w-4" />
                           </Button>
@@ -634,7 +634,7 @@ export default function WaveBusinessTransactionPage() {
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6"
-                      onClick={() => copyToClipboard(detailTransaction.uid)}
+                      onClick={() => copyToClipboard(detailTransaction.uid, `detail-uid-${detailTransaction.uid}`)}
                     >
                       <Copy className="h-3 w-3" />
                     </Button>
