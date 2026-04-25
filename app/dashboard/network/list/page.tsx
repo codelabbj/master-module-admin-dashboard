@@ -1,5 +1,7 @@
 "use client"
-import { useEffect, useState, useMemo } from "react"
+import { Suspense } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
+import { useSearchParams, usePathname, useRouter } from "next/navigation"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
@@ -16,22 +18,38 @@ import { getImageUrl } from "@/lib/utils"
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
-export default function NetworkListPage() {
+function NetworkListPageContent() {
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
+  const router = useRouter()
+
   const [networks, setNetworks] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [countryFilter, setCountryFilter] = useState("all")
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "")
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all")
+  const [countryFilter, setCountryFilter] = useState(searchParams.get("country") || "all")
+  const [startDate, setStartDate] = useState(searchParams.get("start_date") || "")
+  const [endDate, setEndDate] = useState(searchParams.get("end_date") || "")
   const [countries, setCountries] = useState<any[]>([])
-  const [sortField, setSortField] = useState<"nom" | "code" | null>(null)
-  const [sortDirection, setSortDirection] = useState<"+" | "-">("-")
+  const [sortField, setSortField] = useState<"nom" | "code" | null>((searchParams.get("sort") as any) || null)
+  const [sortDirection, setSortDirection] = useState<"+" | "-">((searchParams.get("direction") as "+" | "-") || "-")
   const apiFetch = useApi()
   const { t } = useLanguage()
   const { toast } = useToast();
-  const [currentPage, setCurrentPage] = useState(1)
+  const [currentPage, setCurrentPage] = useState(Number(searchParams.get("page")) || 1)
+
+  const updateUrl = useCallback((updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString())
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === "all" || value === "") {
+        params.delete(key)
+      } else {
+        params.set(key, value)
+      }
+    })
+    router.push(`${pathname}?${params.toString()}`)
+  }, [searchParams, pathname, router])
   
 
   useEffect(() => {
@@ -97,7 +115,7 @@ export default function NetworkListPage() {
     }
     
     fetchNetworks()
-  }, [searchTerm, statusFilter, countryFilter, startDate, endDate, sortField, sortDirection])
+  }, [searchParams, apiFetch, toast, t])
 
   // Fetch countries for filter
   useEffect(() => {
@@ -128,13 +146,8 @@ export default function NetworkListPage() {
   const filteredNetworks = networks
 
   const handleSort = (field: "nom" | "code") => {
-    if (sortField === field) {
-      setSortDirection((prev) => (prev === "+" ? "-" : "+"))
-      setSortField(field)
-    } else {
-      setSortField(field)
-      setSortDirection("-")
-    }
+    const isAsc = sortField === field && sortDirection === "+"
+    updateUrl({ sort: field, direction: isAsc ? "-" : "+" })
   }
 
   return (
@@ -151,14 +164,11 @@ export default function NetworkListPage() {
             <Input
               placeholder={t("common.search")}
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value)
-                setCurrentPage(1)
-              }}
+              onChange={(e) => updateUrl({ search: e.target.value })}
               className="pl-10"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={(val) => updateUrl({ status: val })}>
             <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder={t("network.status")} />
             </SelectTrigger>
@@ -170,7 +180,7 @@ export default function NetworkListPage() {
           </Select>
           <Select
             value={countryFilter}
-            onValueChange={setCountryFilter}
+            onValueChange={(val) => updateUrl({ country: val })}
             disabled={loading || countries.length === 0}
           >
             <SelectTrigger className="w-full sm:w-48" aria-label={t("network.country")}> 
@@ -204,10 +214,7 @@ export default function NetworkListPage() {
               <Input
                 type="date"
                 value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value)
-                  setCurrentPage(1)
-                }}
+                onChange={(e) => updateUrl({ start_date: e.target.value })}
                 className="w-full lg:w-48"
               />
             </div>
@@ -218,10 +225,7 @@ export default function NetworkListPage() {
               <Input
                 type="date"
                 value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value)
-                  setCurrentPage(1)
-                }}
+                onChange={(e) => updateUrl({ end_date: e.target.value })}
                 className="w-full lg:w-48"
               />
             </div>
@@ -229,11 +233,7 @@ export default function NetworkListPage() {
           <div className="flex items-end">
             <Button
               variant="outline"
-              onClick={() => {
-                setStartDate("")
-                setEndDate("")
-                setCurrentPage(1)
-              }}
+              onClick={() => updateUrl({ start_date: null, end_date: null })}
               className="h-10"
             >
               {t("network.clearDates") || "Clear Dates"}
@@ -335,3 +335,11 @@ export default function NetworkListPage() {
     </Card>
   )
 } 
+
+export default function NetworkListPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Chargement...</div>}>
+      <NetworkListPageContent />
+    </Suspense>
+  )
+}

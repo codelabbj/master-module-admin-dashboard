@@ -1,6 +1,7 @@
 "use client"
+import { Suspense } from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useApi } from "@/lib/useApi"
 import { useLanguage } from "@/components/providers/language-provider"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
@@ -13,27 +14,42 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
 import { AggregatorTransaction } from "@/lib/aggregator-api"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { useRouter } from "next/navigation"
+import { useSearchParams, usePathname, useRouter } from "next/navigation"
 
 import { formatApiDateTime } from "@/lib/utils";
-export default function AggregatorTransactionsPage() {
+function AggregatorTransactionsPageContent() {
+    const searchParams = useSearchParams()
+    const pathname = usePathname()
+    const router = useRouter()
+
     const [transactions, setTransactions] = useState<AggregatorTransaction[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
     const [filters, setFilters] = useState({
-        status: "",
-        type: "",
-        user: "",
-        date_from: "",
-        date_to: ""
+        status: searchParams.get("status") || "",
+        type: searchParams.get("type") || "",
+        user: searchParams.get("user") || "",
+        date_from: searchParams.get("date_from") || "",
+        date_to: searchParams.get("date_to") || ""
     })
     const [selectedTx, setSelectedTx] = useState<AggregatorTransaction | null>(null)
     const [showDetail, setShowDetail] = useState(false)
 
     const apiFetch = useApi()
     const { t } = useLanguage()
-    const router = useRouter()
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+
+    const updateUrl = useCallback((updates: Record<string, string | null>) => {
+        const params = new URLSearchParams(searchParams.toString())
+        Object.entries(updates).forEach(([key, value]) => {
+            if (value === null || value === "") {
+                params.delete(key)
+            } else {
+                params.set(key, value)
+            }
+        })
+        router.push(`${pathname}?${params.toString()}`)
+    }, [searchParams, pathname, router])
 
     const fetchTransactions = async () => {
         setLoading(true)
@@ -56,8 +72,15 @@ export default function AggregatorTransactionsPage() {
     }
 
     useEffect(() => {
+        setFilters({
+            status: searchParams.get("status") || "",
+            type: searchParams.get("type") || "",
+            user: searchParams.get("user") || "",
+            date_from: searchParams.get("date_from") || "",
+            date_to: searchParams.get("date_to") || ""
+        })
         fetchTransactions()
-    }, [apiFetch, filters])
+    }, [searchParams, apiFetch])
 
     const getStatusVariant = (status: string) => {
         switch (status.toLowerCase()) {
@@ -129,7 +152,7 @@ export default function AggregatorTransactionsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-500">{t("common.status")}</label>
-                            <Select onValueChange={(v) => setFilters({ ...filters, status: v === "all" ? "" : v })}>
+                            <Select onValueChange={(v) => updateUrl({ status: v === "all" ? null : v })}>
                                 <SelectTrigger>
                                     <SelectValue placeholder={t("common.allStatuses")} />
                                 </SelectTrigger>
@@ -481,3 +504,12 @@ export default function AggregatorTransactionsPage() {
     )
 }
 
+
+
+export default function AggregatorTransactionsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Chargement...</div>}>
+      <AggregatorTransactionsPageContent />
+    </Suspense>
+  )
+}

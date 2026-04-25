@@ -1,6 +1,8 @@
 "use client"
+import { Suspense } from "react"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
+import { useSearchParams, usePathname, useRouter } from "next/navigation"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
@@ -27,21 +29,37 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
-export default function DevicesListPage() {
+function DevicesListPageContent() {
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
+  const router = useRouter()
+
   const [devices, setDevices] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [sortField, setSortField] = useState<"name" | "is_online" | null>(null)
-  const [sortDirection, setSortDirection] = useState<"+" | "-">("-")
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "")
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all")
+  const [sortField, setSortField] = useState<"name" | "is_online" | null>((searchParams.get("sort") as any) || null)
+  const [sortDirection, setSortDirection] = useState<"+" | "-">((searchParams.get("direction") as "+" | "-") || "-")
   const apiFetch = useApi()
   const { t } = useLanguage()
   const { toast } = useToast();
-  const [currentPage, setCurrentPage] = useState(1)
+  const [currentPage, setCurrentPage] = useState(Number(searchParams.get("page")) || 1)
   const { lastMessage } = useWebSocket();
   const [selectedDevice, setSelectedDevice] = useState<any>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const updateUrl = useCallback((updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString())
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === "all" || value === "") {
+        params.delete(key)
+      } else {
+        params.set(key, value)
+      }
+    })
+    router.push(`${pathname}?${params.toString()}`)
+  }, [searchParams, pathname, router])
 
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -93,7 +111,7 @@ export default function DevicesListPage() {
     }
 
     fetchDevices()
-  }, [searchTerm, statusFilter, currentPage, sortField, sortDirection])
+  }, [searchParams, statusFilter, sortField, sortDirection, itemsPerPage, apiFetch, toast, t])
 
   // Handle WebSocket messages for real-time updates
   useEffect(() => {
@@ -284,14 +302,14 @@ export default function DevicesListPage() {
               <Input
                 placeholder="Rechercher un appareil..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => updateUrl({ search: e.target.value })}
                 className="pl-10"
                 variant="minimal"
               />
             </div>
 
             {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={(val) => updateUrl({ status: val })}>
               <SelectTrigger>
                 <SelectValue placeholder="Filtrer par statut" />
               </SelectTrigger>
@@ -480,40 +498,46 @@ export default function DevicesListPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              onClick={() => updateUrl({ page: Math.max(1, currentPage - 1).toString() })}
               disabled={currentPage === 1}
             >
               <ChevronLeft className="h-4 w-4" />
               Précédent
             </Button>
             <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let page;
-                if (totalPages <= 5) {
-                  page = i + 1;
-                } else if (currentPage <= 3) {
-                  page = i + 1;
-                } else if (currentPage >= totalPages - 2) {
-                  page = totalPages - 4 + i;
-                } else {
-                  page = currentPage - 2 + i;
-                }
-                return (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(page)}
-                  >
-                    {page}
-                  </Button>
-                );
-              })}
+              {(() => {
+                  const pages = [];
+                  const _totalPages = totalPages;
+                  for (let i = 1; i <= _totalPages; i++) {
+                    if (i === 1 || i === _totalPages || Math.abs(i - currentPage) <= 1) {
+                      pages.push(i);
+                    } else if (pages[pages.length - 1] !== '...') {
+                      pages.push('...');
+                    }
+                  }
+                  
+                  return pages.map((page, index) => {
+                    if (page === '...') {
+                      return <span key={`ellipsis-${index}`} className="px-2 text-gray-500 text-sm">...</span>;
+                    }
+                    return (
+                      <Button
+                        key={`page-${page}`}
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => updateUrl({ page: page.toString() })}
+                        className={currentPage === page ? "bg-orange-500 hover:bg-orange-600 text-white border-orange-500" : "border-gray-200 dark:border-gray-600"}
+                      >
+                        {page}
+                      </Button>
+                    );
+                  });
+                })()}
             </div>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              onClick={() => updateUrl({ page: Math.min(totalPages, currentPage + 1).toString() })}
               disabled={currentPage === totalPages}
             >
               Suivant
@@ -545,5 +569,13 @@ export default function DevicesListPage() {
         </Card>
       )}
     </div>
+  )
+}
+
+export default function DevicesListPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Chargement...</div>}>
+      <DevicesListPageContent />
+    </Suspense>
   )
 }

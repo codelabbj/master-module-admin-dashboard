@@ -1,6 +1,8 @@
 "use client"
+import { Suspense } from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { useSearchParams, usePathname, useRouter } from "next/navigation"
 import { useApi } from "@/lib/useApi"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -74,7 +76,7 @@ interface ApiResponse {
   results: WaveBusinessTransaction[]
 }
 
-export default function WaveBusinessTransactionPage() {
+function WaveBusinessTransactionPageContent() {
   const [transactions, setTransactions] = useState<WaveBusinessTransaction[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -90,13 +92,29 @@ export default function WaveBusinessTransactionPage() {
       setTimeout(() => setCopiedId(null), 2000)
     })
   }
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [currentPage, setCurrentPage] = useState(1)
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
+  const router = useRouter()
+
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "")
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all")
+  const [currentPage, setCurrentPage] = useState(Number(searchParams.get("page")) || 1)
   const [totalCount, setTotalCount] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
-  const [sortField, setSortField] = useState<"amount" | "created_at" | "status" | null>(null)
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
+  const [sortField, setSortField] = useState<"amount" | "created_at" | "status" | null>((searchParams.get("sort") as any) || null)
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">((searchParams.get("direction") as "asc" | "desc") || "desc")
+
+  const updateUrl = useCallback((updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString())
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === "all" || value === "") {
+        params.delete(key)
+      } else {
+        params.set(key, value)
+      }
+    })
+    router.push(`${pathname}?${params.toString()}`)
+  }, [searchParams, pathname, router])
   const [detailModalOpen, setDetailModalOpen] = useState(false)
   const [detailTransaction, setDetailTransaction] = useState<WaveBusinessTransaction | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
@@ -162,8 +180,15 @@ export default function WaveBusinessTransactionPage() {
   }
 
   useEffect(() => {
+    // Sync state from URL
+    setSearchTerm(searchParams.get("search") || "")
+    setStatusFilter(searchParams.get("status") || "all")
+    setCurrentPage(Number(searchParams.get("page")) || 1)
+    setSortField((searchParams.get("sort") as any) || null)
+    setSortDirection((searchParams.get("direction") as "asc" | "desc") || "desc")
+
     fetchTransactions()
-  }, [searchTerm, statusFilter, currentPage, sortField, sortDirection])
+  }, [searchParams, baseUrl])
 
   const handleRefresh = async () => {
     await fetchTransactions()
@@ -172,12 +197,12 @@ export default function WaveBusinessTransactionPage() {
   const filteredTransactions = transactions // Filtering handled by API
 
   const handleSort = (field: "amount" | "created_at" | "status") => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
-    } else {
-      setSortField(field)
-      setSortDirection("desc")
-    }
+    const isAsc = sortField === field && sortDirection === "asc"
+    updateUrl({
+      sort: field,
+      direction: isAsc ? "desc" : "asc",
+      page: "1"
+    })
   }
 
   const getStatusBadge = (status: string) => {
@@ -360,14 +385,17 @@ export default function WaveBusinessTransactionPage() {
               <Input
                 placeholder="Rechercher une transaction..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value)
+                  updateUrl({ search: e.target.value, page: "1" })
+                }}
                 className="pl-10"
                 variant="minimal"
               />
             </div>
 
             {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={(val) => updateUrl({ status: val, page: "1" })}>
               <SelectTrigger>
                 <SelectValue placeholder="Filtrer par statut" />
               </SelectTrigger>
@@ -565,40 +593,46 @@ export default function WaveBusinessTransactionPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              onClick={() => updateUrl({ page: Math.max(1, currentPage - 1).toString() })}
               disabled={currentPage === 1}
             >
               <ChevronLeft className="h-4 w-4" />
               Précédent
             </Button>
             <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let page;
-                if (totalPages <= 5) {
-                  page = i + 1;
-                } else if (currentPage <= 3) {
-                  page = i + 1;
-                } else if (currentPage >= totalPages - 2) {
-                  page = totalPages - 4 + i;
-                } else {
-                  page = currentPage - 2 + i;
-                }
-                return (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(page)}
-                  >
-                    {page}
-                  </Button>
-                );
-              })}
+              {(() => {
+                  const pages = [];
+                  const _totalPages = totalPages;
+                  for (let i = 1; i <= _totalPages; i++) {
+                    if (i === 1 || i === _totalPages || Math.abs(i - currentPage) <= 1) {
+                      pages.push(i);
+                    } else if (pages[pages.length - 1] !== '...') {
+                      pages.push('...');
+                    }
+                  }
+                  
+                  return pages.map((page, index) => {
+                    if (page === '...') {
+                      return <span key={`ellipsis-${index}`} className="px-2 text-gray-500 text-sm">...</span>;
+                    }
+                    return (
+                      <Button
+                        key={`page-${page}`}
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePageChange(page as number)}
+                        className={currentPage === page ? "bg-orange-500 hover:bg-orange-600 text-white border-orange-500" : "border-gray-200 dark:border-gray-600"}
+                      >
+                        {page}
+                      </Button>
+                    );
+                  });
+                })()}
             </div>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              onClick={() => updateUrl({ page: Math.min(totalPages, currentPage + 1).toString() })}
               disabled={currentPage === totalPages}
             >
               Suivant
@@ -735,5 +769,14 @@ export default function WaveBusinessTransactionPage() {
         baseUrl={baseUrl}
       />
     </div>
+  )
+}
+
+
+export default function WaveBusinessTransactionPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Chargement...</div>}>
+      <WaveBusinessTransactionPageContent />
+    </Suspense>
   )
 }

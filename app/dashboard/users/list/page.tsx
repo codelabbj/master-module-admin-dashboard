@@ -1,6 +1,8 @@
 "use client"
+import { Suspense } from "react"
 
 import { useState, useMemo, useEffect, useCallback } from "react"
+import { useSearchParams, usePathname, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -40,24 +42,40 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
 
-export default function UsersPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
-  const [currentPage, setCurrentPage] = useState(1)
+function UsersPageContent() {
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
+  const router = useRouter()
+
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "")
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all")
+  const [startDate, setStartDate] = useState(searchParams.get("start_date") || "")
+  const [endDate, setEndDate] = useState(searchParams.get("end_date") || "")
+  const [currentPage, setCurrentPage] = useState(Number(searchParams.get("page")) || 1)
   const [users, setUsers] = useState<any[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [sortField, setSortField] = useState<"display_name" | "email" | "created_at" | null>(null)
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
+  const [sortField, setSortField] = useState<"display_name" | "email" | "created_at" | null>((searchParams.get("sort") as any) || null)
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">((searchParams.get("direction") as "asc" | "desc") || "desc")
   const { t } = useLanguage()
   const itemsPerPage = 10
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
-  const [viewType, setViewType] = useState("all")
+  const [viewType, setViewType] = useState(searchParams.get("view") || "all")
   const { toast } = useToast()
+
+  const updateUrl = useCallback((updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString())
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === "all" || value === "") {
+        params.delete(key)
+      } else {
+        params.set(key, value)
+      }
+    })
+    router.push(`${pathname}?${params.toString()}`)
+  }, [searchParams, pathname, router])
   const [activatingUid, setActivatingUid] = useState<string | null>(null)
   const [deactivatingUid, setDeactivatingUid] = useState<string | null>(null)
   const [selectedUids, setSelectedUids] = useState<string[]>([]);
@@ -154,8 +172,8 @@ export default function UsersPage() {
 
         // Handle the actual API response structure
         const usersData = data.users || data.results || [];
-        const totalCount = data.pagination?.total_count || data.count || 0;
-        const totalPages = data.pagination?.total_pages || Math.ceil(totalCount / itemsPerPage);
+        const totalCountValue = data.pagination?.total_count || data.count || 0;
+        const totalPagesValue = data.pagination?.total_pages || Math.ceil(totalCountValue / itemsPerPage);
 
         const usersWithDefaults = (usersData || []).map((u: any) => ({
           ...u,
@@ -165,8 +183,8 @@ export default function UsersPage() {
         }));
 
         setUsers(usersWithDefaults);
-        setTotalCount(totalCount);
-        setTotalPages(totalPages);
+        setTotalCount(totalCountValue);
+        setTotalPages(totalPagesValue);
         toast({
           title: "Succès",
           description: "Utilisateurs chargés avec succès",
@@ -185,20 +203,31 @@ export default function UsersPage() {
         setLoading(false);
       }
     };
+
+    // Sync state from URL
+    setSearchTerm(searchParams.get("search") || "");
+    setStatusFilter(searchParams.get("status") || "all");
+    setStartDate(searchParams.get("start_date") || "");
+    setEndDate(searchParams.get("end_date") || "");
+    setCurrentPage(Number(searchParams.get("page")) || 1);
+    setViewType(searchParams.get("view") || "all");
+    setSortField((searchParams.get("sort") as any) || null);
+    setSortDirection((searchParams.get("direction") as "asc" | "desc") || "desc");
+
     fetchUsers();
-  }, [searchTerm, statusFilter, currentPage, sortField, sortDirection, viewType, startDate, endDate]);
+  }, [searchParams, itemsPerPage, baseUrl, t, toast, apiFetch]);
 
   const filteredUsers = users // Filtering is now handled by the API
   const startIndex = (currentPage - 1) * itemsPerPage
   const paginatedUsers = filteredUsers // Already paginated by API
 
   const handleSort = (field: "display_name" | "email" | "created_at") => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
-    } else {
-      setSortField(field)
-      setSortDirection("desc")
-    }
+    const isAsc = sortField === field && sortDirection === "asc"
+    updateUrl({
+      sort: field,
+      direction: isAsc ? "desc" : "asc",
+      page: "1"
+    })
   }
 
   const getStatusBadge = (status: string) => {
@@ -537,14 +566,17 @@ export default function UsersPage() {
               <Input
                 placeholder="Rechercher des utilisateurs..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value)
+                  updateUrl({ search: e.target.value, page: "1" })
+                }}
                 className="pl-10"
                 variant="minimal"
               />
             </div>
 
             {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={(val) => updateUrl({ status: val, page: "1" })}>
               <SelectTrigger>
                 <SelectValue placeholder="Filtrer par statut" />
               </SelectTrigger>
@@ -557,7 +589,7 @@ export default function UsersPage() {
             </Select>
 
             {/* View Type */}
-            <Select value={viewType} onValueChange={setViewType}>
+            <Select value={viewType} onValueChange={(val) => updateUrl({ view: val, page: "1" })}>
               <SelectTrigger>
                 <SelectValue placeholder="Type de vue" />
               </SelectTrigger>
@@ -602,10 +634,7 @@ export default function UsersPage() {
                 <Input
                   type="date"
                   value={startDate}
-                  onChange={(e) => {
-                    setStartDate(e.target.value)
-                    setCurrentPage(1)
-                  }}
+                  onChange={(e) => updateUrl({ start_date: e.target.value, page: "1" })}
                   className="w-full lg:w-48"
                 />
               </div>
@@ -616,10 +645,7 @@ export default function UsersPage() {
                 <Input
                   type="date"
                   value={endDate}
-                  onChange={(e) => {
-                    setEndDate(e.target.value)
-                    setCurrentPage(1)
-                  }}
+                  onChange={(e) => updateUrl({ end_date: e.target.value, page: "1" })}
                   className="w-full lg:w-48"
                 />
               </div>
@@ -628,9 +654,7 @@ export default function UsersPage() {
               <Button
                 variant="outline"
                 onClick={() => {
-                  setStartDate("")
-                  setEndDate("")
-                  setCurrentPage(1)
+                  updateUrl({ start_date: null, end_date: null, page: "1" })
                 }}
                 className="h-10"
               >
@@ -825,40 +849,46 @@ export default function UsersPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              onClick={() => updateUrl({ page: Math.max(1, currentPage - 1).toString() })}
               disabled={currentPage === 1}
             >
               <ChevronLeft className="h-4 w-4" />
               Précédent
             </Button>
             <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let page;
-                if (totalPages <= 5) {
-                  page = i + 1;
-                } else if (currentPage <= 3) {
-                  page = i + 1;
-                } else if (currentPage >= totalPages - 2) {
-                  page = totalPages - 4 + i;
-                } else {
-                  page = currentPage - 2 + i;
-                }
-                return (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(page)}
-                  >
-                    {page}
-                  </Button>
-                );
-              })}
+              {(() => {
+                  const pages = [];
+                  const _totalPages = totalPages;
+                  for (let i = 1; i <= _totalPages; i++) {
+                    if (i === 1 || i === _totalPages || Math.abs(i - currentPage) <= 1) {
+                      pages.push(i);
+                    } else if (pages[pages.length - 1] !== '...') {
+                      pages.push('...');
+                    }
+                  }
+                  
+                  return pages.map((page, index) => {
+                    if (page === '...') {
+                      return <span key={`ellipsis-${index}`} className="px-2 text-gray-500 text-sm">...</span>;
+                    }
+                    return (
+                      <Button
+                        key={`page-${page}`}
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePageChange(page as number)}
+                        className={currentPage === page ? "bg-orange-500 hover:bg-orange-600 text-white border-orange-500" : "border-gray-200 dark:border-gray-600"}
+                      >
+                        {page}
+                      </Button>
+                    );
+                  });
+                })()}
             </div>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              onClick={() => updateUrl({ page: Math.min(totalPages, currentPage + 1).toString() })}
               disabled={currentPage === totalPages}
             >
               Suivant
@@ -1370,5 +1400,14 @@ export default function UsersPage() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+
+export default function UsersPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Chargement...</div>}>
+      <UsersPageContent />
+    </Suspense>
   )
 }

@@ -1,6 +1,8 @@
 "use client"
+import { Suspense } from "react"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
+import { useSearchParams, usePathname, useRouter } from "next/navigation"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
@@ -38,17 +40,33 @@ import { formatApiDateTime } from "@/lib/utils"
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
-export default function AggregatorUsersPage() {
+function AggregatorUsersPageContent() {
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
+  const router = useRouter()
+
   const [data, setData] = useState<AggregatorListResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
-  const [page, setPage] = useState(1)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
+  const [page, setPage] = useState(Number(searchParams.get("page")) || 1)
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "")
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all")
   
   const apiFetch = useApi()
   const { t } = useLanguage()
   const { toast } = useToast();
+
+  const updateUrl = useCallback((updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString())
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === "all" || value === "") {
+        params.delete(key)
+      } else {
+        params.set(key, value)
+      }
+    })
+    router.push(`${pathname}?${params.toString()}`)
+  }, [searchParams, pathname, router])
 
   const fetchUsers = async () => {
     setLoading(true)
@@ -66,8 +84,11 @@ export default function AggregatorUsersPage() {
   }
 
   useEffect(() => {
+    setPage(Number(searchParams.get("page")) || 1)
+    setSearchTerm(searchParams.get("search") || "")
+    setStatusFilter(searchParams.get("status") || "all")
     fetchUsers()
-  }, [page, apiFetch])
+  }, [searchParams, apiFetch])
 
   const handleToggleStatus = async (uid: string, currentStatus: boolean) => {
     const confirmMsg = currentStatus
@@ -207,14 +228,14 @@ export default function AggregatorUsersPage() {
               <Input
                 placeholder={t("aggregators.searchPlaceholder") || "Search by name or email..."}
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => updateUrl({ search: e.target.value })}
                 className="pl-10"
                 variant="minimal"
               />
             </div>
 
             {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={(val) => updateUrl({ status: val })}>
               <SelectTrigger>
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
@@ -367,7 +388,7 @@ export default function AggregatorUsersPage() {
               variant="outline"
               size="sm"
               disabled={!data.pagination.has_previous}
-              onClick={() => setPage(page - 1)}
+              onClick={() => updateUrl({ page: (page - 1).toString() })}
             >
               {t("common.previous") || "Previous"}
             </Button>
@@ -375,7 +396,7 @@ export default function AggregatorUsersPage() {
               variant="outline"
               size="sm"
               disabled={!data.pagination.has_next}
-              onClick={() => setPage(page + 1)}
+              onClick={() => updateUrl({ page: (page + 1).toString() })}
             >
               {t("common.next") || "Next"}
             </Button>
@@ -386,3 +407,12 @@ export default function AggregatorUsersPage() {
   )
 }
 
+
+
+export default function AggregatorUsersPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Chargement...</div>}>
+      <AggregatorUsersPageContent />
+    </Suspense>
+  )
+}

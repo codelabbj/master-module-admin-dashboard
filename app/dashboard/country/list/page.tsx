@@ -1,6 +1,8 @@
 "use client"
+import { Suspense } from "react"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
+import { useSearchParams, usePathname, useRouter } from "next/navigation"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
@@ -27,18 +29,34 @@ import { Badge } from "@/components/ui/badge"
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
-export default function CountryListPage() {
+function CountryListPageContent() {
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
+  const router = useRouter()
+
   const [countries, setCountries] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [sortField, setSortField] = useState<"nom" | "code" | null>(null)
-  const [sortDirection, setSortDirection] = useState<"+" | "-">("-")
+  const [currentPage, setCurrentPage] = useState(Number(searchParams.get("page")) || 1)
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "")
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all")
+  const [sortField, setSortField] = useState<"nom" | "code" | null>((searchParams.get("sort") as any) || null)
+  const [sortDirection, setSortDirection] = useState<"+" | "-">((searchParams.get("direction") as "+" | "-") || "-")
   const apiFetch = useApi()
   const { t } = useLanguage()
   const { toast } = useToast();
+
+  const updateUrl = useCallback((updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString())
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === "all" || value === "") {
+        params.delete(key)
+      } else {
+        params.set(key, value)
+      }
+    })
+    router.push(`${pathname}?${params.toString()}`)
+  }, [searchParams, pathname, router])
 
   useEffect(() => {
     const fetchCountries = async () => {
@@ -66,7 +84,7 @@ export default function CountryListPage() {
     }
 
     fetchCountries()
-  }, [searchTerm, statusFilter, currentPage, sortField, sortDirection])
+  }, [searchParams, apiFetch, toast, t])
 
   const filteredCountries = useMemo(() => {
     let filtered = countries
@@ -167,14 +185,14 @@ export default function CountryListPage() {
               <Input
                 placeholder="Rechercher un pays..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => updateUrl({ search: e.target.value })}
                 className="pl-10"
                 variant="minimal"
               />
             </div>
 
             {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={(val) => updateUrl({ status: val })}>
               <SelectTrigger>
                 <SelectValue placeholder="Filtrer par statut" />
               </SelectTrigger>
@@ -305,5 +323,13 @@ export default function CountryListPage() {
         </Card>
       )}
     </div>
+  )
+}
+
+export default function CountryListPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Chargement...</div>}>
+      <CountryListPageContent />
+    </Suspense>
   )
 }

@@ -1,6 +1,8 @@
 "use client"
+import { Suspense } from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { useSearchParams, usePathname, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -16,17 +18,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 
 
-export default function TopupPage() {
-	const [searchTerm, setSearchTerm] = useState("")
-	const [statusFilter, setStatusFilter] = useState("all")
-	const [currentPage, setCurrentPage] = useState(1)
+function TopupPageContent() {
+	const searchParams = useSearchParams()
+	const pathname = usePathname()
+	const router = useRouter()
+
+	const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "")
+	const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all")
+	const [currentPage, setCurrentPage] = useState(Number(searchParams.get("page")) || 1)
 	const [topups, setTopups] = useState<any[]>([])
 	const [totalCount, setTotalCount] = useState(0)
 	const [totalPages, setTotalPages] = useState(1)
 	const [loading, setLoading] = useState(false)
 	const [error, setError] = useState("")
-	const [sortField, setSortField] = useState<"amount" | "created_at" | "status" | null>(null)
-	const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
+	const [sortField, setSortField] = useState<"amount" | "created_at" | "status" | null>((searchParams.get("sort") as any) || null)
+	const [sortDirection, setSortDirection] = useState<"asc" | "desc">((searchParams.get("direction") as "asc" | "desc") || "desc")
 	const { t } = useLanguage()
 	const itemsPerPage = 10
 	const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
@@ -36,6 +42,18 @@ export default function TopupPage() {
 	const [detailTopup, setDetailTopup] = useState<any | null>(null)
 	const [detailLoading, setDetailLoading] = useState(false)
 	const [detailError, setDetailError] = useState("")
+
+	const updateUrl = useCallback((updates: Record<string, string | null>) => {
+		const params = new URLSearchParams(searchParams.toString())
+		Object.entries(updates).forEach(([key, value]) => {
+			if (value === null || value === "all" || value === "") {
+				params.delete(key)
+			} else {
+				params.set(key, value)
+			}
+		})
+		router.push(`${pathname}?${params.toString()}`)
+	}, [searchParams, pathname, router])
 
 	// Approve/Reject modal state
 	const [actionModalOpen, setActionModalOpen] = useState(false);
@@ -93,8 +111,13 @@ export default function TopupPage() {
 	}
 
 	useEffect(() => {
+		setSearchTerm(searchParams.get("search") || "")
+		setStatusFilter(searchParams.get("status") || "all")
+		setCurrentPage(Number(searchParams.get("page")) || 1)
+		setSortField((searchParams.get("sort") as any) || null)
+		setSortDirection((searchParams.get("direction") as "asc" | "desc") || "desc")
 		fetchTopups()
-	}, [searchTerm, currentPage, itemsPerPage, baseUrl, statusFilter, sortField, sortDirection, t, toast, apiFetch])
+	}, [searchParams, itemsPerPage, baseUrl, statusFilter, t, toast, apiFetch])
 
 	const handleRefresh = async () => {
 		await fetchTopups()
@@ -103,12 +126,8 @@ export default function TopupPage() {
 	const startIndex = (currentPage - 1) * itemsPerPage
 
 	const handleSort = (field: "amount" | "created_at" | "status") => {
-		if (sortField === field) {
-			setSortDirection(sortDirection === "asc" ? "desc" : "asc")
-		} else {
-			setSortField(field)
-			setSortDirection("desc")
-		}
+		const isAsc = sortField === field && sortDirection === "asc"
+		updateUrl({ sort: field, direction: isAsc ? "desc" : "asc", page: "1" })
 	}
 
 	// Fetch topup details
@@ -313,11 +332,14 @@ export default function TopupPage() {
 							<Input
 								placeholder={t("topup.search") || "Rechercher"}
 								value={searchTerm}
-								onChange={(e) => setSearchTerm(e.target.value)}
+								onChange={(e) => {
+									setSearchTerm(e.target.value)
+									updateUrl({ search: e.target.value, page: "1" })
+								}}
 								className="pl-10"
 							/>
 						</div>
-						<Select value={statusFilter} onValueChange={setStatusFilter}>
+						<Select value={statusFilter} onValueChange={(val) => updateUrl({ status: val, page: "1" })}>
 							<SelectTrigger className="w-full sm:w-48">
 								<SelectValue placeholder={t("topup.allStatuses") || "Tous les statuts"} />
 							</SelectTrigger>
@@ -396,7 +418,6 @@ export default function TopupPage() {
 														!!disabledTopups[topup.uid]
 														|| ((topup.status_display || topup.status)?.toLowerCase() !== "pending" && (topup.status_display || topup.status)?.toLowerCase() !== "en attente" && (topup.status_display || topup.status)?.toLowerCase() !== "proof_submitted" && (topup.status_display || topup.status)?.toLowerCase() !== "preuve soumise")
 														|| !!topup.is_expired
-														// || (topup.expires_at && new Date(topup.expires_at) < new Date())
 													}
 													onClick={() => {
 														setActionType("approve");
@@ -415,7 +436,6 @@ export default function TopupPage() {
 														!!disabledTopups[topup.uid]
 														|| ((topup.status_display || topup.status)?.toLowerCase() !== "pending" && (topup.status_display || topup.status)?.toLowerCase() !== "en attente" && (topup.status_display || topup.status)?.toLowerCase() !== "proof_submitted" && (topup.status_display || topup.status)?.toLowerCase() !== "preuve soumise")
 														|| !!topup.is_expired
-														// || (topup.expires_at && new Date(topup.expires_at) < new Date())
 													}
 													onClick={() => {
 														setActionType("reject");
@@ -444,7 +464,7 @@ export default function TopupPage() {
 							<Button
 								variant="outline"
 								size="sm"
-								onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+								onClick={() => updateUrl({ page: Math.max(currentPage - 1, 1).toString() })}
 								disabled={currentPage === 1}
 								className="flex items-center gap-1"
 							>
@@ -457,7 +477,7 @@ export default function TopupPage() {
 							<Button
 								variant="outline"
 								size="sm"
-								onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+								onClick={() => updateUrl({ page: Math.min(currentPage + 1, totalPages).toString() })}
 								disabled={currentPage === totalPages}
 								className="flex items-center gap-1"
 							>
@@ -707,3 +727,12 @@ export default function TopupPage() {
 	)
 }
 
+
+
+export default function TopupPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Chargement...</div>}>
+      <TopupPageContent />
+    </Suspense>
+  )
+}

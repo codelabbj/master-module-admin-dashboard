@@ -1,6 +1,8 @@
 "use client"
+import { Suspense } from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { useSearchParams, usePathname, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -26,16 +28,20 @@ import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-displa
 
 import { formatApiDateTime } from "@/lib/utils";
 
-export default function TransfersPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [senderFilter, setSenderFilter] = useState("")
-  const [receiverFilter, setReceiverFilter] = useState("")
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [sortField, setSortField] = useState<"amount" | "date" | null>(null)
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
+function TransfersPageContent() {
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
+  const router = useRouter()
+
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "")
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all")
+  const [senderFilter, setSenderFilter] = useState(searchParams.get("sender") || "")
+  const [receiverFilter, setReceiverFilter] = useState(searchParams.get("receiver") || "")
+  const [startDate, setStartDate] = useState(searchParams.get("start_date") || "")
+  const [endDate, setEndDate] = useState(searchParams.get("end_date") || "")
+  const [currentPage, setCurrentPage] = useState(Number(searchParams.get("page")) || 1)
+  const [sortField, setSortField] = useState<"amount" | "date" | null>((searchParams.get("sort") as any) || null)
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">((searchParams.get("direction") as "asc" | "desc") || "desc")
   const [transfers, setTransfers] = useState<any[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -49,6 +55,18 @@ export default function TransfersPage() {
   const { toast } = useToast()
   const [detailModalOpen, setDetailModalOpen] = useState(false)
   const [selectedTransfer, setSelectedTransfer] = useState<any | null>(null)
+
+  const updateUrl = useCallback((updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString())
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === "all" || value === "") {
+        params.delete(key)
+      } else {
+        params.set(key, value)
+      }
+    })
+    router.push(`${pathname}?${params.toString()}`)
+  }, [searchParams, pathname, router])
 
   const fetchTransfers = async () => {
     setLoading(true)
@@ -105,8 +123,17 @@ export default function TransfersPage() {
   }
 
   useEffect(() => {
+    setSearchTerm(searchParams.get("search") || "")
+    setStatusFilter(searchParams.get("status") || "all")
+    setSenderFilter(searchParams.get("sender") || "")
+    setReceiverFilter(searchParams.get("receiver") || "")
+    setStartDate(searchParams.get("start_date") || "")
+    setEndDate(searchParams.get("end_date") || "")
+    setCurrentPage(Number(searchParams.get("page")) || 1)
+    setSortField((searchParams.get("sort") as any) || null)
+    setSortDirection((searchParams.get("direction") as "asc" | "desc") || "desc")
     fetchTransfers()
-  }, [currentPage, itemsPerPage, searchTerm, statusFilter, senderFilter, receiverFilter, startDate, endDate, sortField, sortDirection])
+  }, [searchParams, itemsPerPage, baseUrl, apiFetch, toast, t])
 
   useEffect(() => {
     fetchStatistics()
@@ -116,9 +143,8 @@ export default function TransfersPage() {
   const startIndex = (currentPage - 1) * itemsPerPage
 
   const handleSort = (field: "amount" | "date") => {
-    setCurrentPage(1)
-    setSortDirection((prevDir) => (sortField === field ? (prevDir === "desc" ? "asc" : "desc") : "desc"))
-    setSortField(field)
+    const isAsc = sortField === field && sortDirection === "asc"
+    updateUrl({ sort: field, direction: isAsc ? "desc" : "asc", page: "1" })
   }
 
   const getStatusBadge = (status: string) => {
@@ -181,11 +207,11 @@ export default function TransfersPage() {
               <Input
                 placeholder={t("common.search")}
                 value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => updateUrl({ search: e.target.value, page: "1" })}
                 className="pl-10"
               />
             </div>
-            <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}>
+            <Select value={statusFilter} onValueChange={(val) => updateUrl({ status: val, page: "1" })}>
               <SelectTrigger className="w-full lg:w-48">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
@@ -205,7 +231,7 @@ export default function TransfersPage() {
               <Input
                 placeholder="Sender UID"
                 value={senderFilter}
-                onChange={(e) => { setSenderFilter(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => updateUrl({ sender: e.target.value, page: "1" })}
               />
             </div>
             <div className="flex flex-col gap-1 w-full lg:w-48">
@@ -213,7 +239,7 @@ export default function TransfersPage() {
               <Input
                 placeholder="Receiver UID"
                 value={receiverFilter}
-                onChange={(e) => { setReceiverFilter(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => updateUrl({ receiver: e.target.value, page: "1" })}
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -221,7 +247,7 @@ export default function TransfersPage() {
               <Input
                 type="date"
                 value={startDate}
-                onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => updateUrl({ start_date: e.target.value, page: "1" })}
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -229,11 +255,11 @@ export default function TransfersPage() {
               <Input
                 type="date"
                 value={endDate}
-                onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => updateUrl({ end_date: e.target.value, page: "1" })}
               />
             </div>
             <div className="flex items-end">
-              <Button variant="outline" onClick={() => { setStartDate(""); setEndDate(""); setCurrentPage(1); }}>
+              <Button variant="outline" onClick={() => updateUrl({ start_date: null, end_date: null, page: "1" })}>
                 {t("common.clearDates")}
               </Button>
             </div>
@@ -306,14 +332,14 @@ export default function TransfersPage() {
                {t("common.showing")}: {startIndex + 1}-{Math.min(startIndex + itemsPerPage, totalCount)} {t("common.of")} {totalCount}
             </div>
             <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}>
+              <Button variant="outline" size="sm" onClick={() => updateUrl({ page: Math.max(currentPage - 1, 1).toString() })} disabled={currentPage === 1}>
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 {t("common.previous")}
               </Button>
               <div className="text-sm">
                 {t("common.page")} {currentPage} {t("common.of")} {totalPages}
               </div>
-              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>
+              <Button variant="outline" size="sm" onClick={() => updateUrl({ page: Math.min(currentPage + 1, totalPages).toString() })} disabled={currentPage === totalPages}>
                 {t("common.next")}
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
@@ -376,3 +402,12 @@ export default function TransfersPage() {
   )
 }
 
+
+
+export default function TransfersPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Chargement...</div>}>
+      <TransfersPageContent />
+    </Suspense>
+  )
+}
