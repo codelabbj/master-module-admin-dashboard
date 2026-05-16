@@ -358,14 +358,16 @@ function TransactionsPageContent() {
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; color: string }> = {
-      pending: { label: "En attente", color: "#ffc107" },      // jaune
-      sent_to_user: { label: "Envoyé", color: "#17a2b8" },          // bleu clair
-      processing: { label: "En cours", color: "#fd7e14" },        // orange
-      completed: { label: "Terminé", color: "#28a745" },         // vert foncé
-      success: { label: "Succès", color: "#20c997" },          // turquoise
-      failed: { label: "Échec", color: "#dc3545" },           // rouge
-      cancelled: { label: "Annulé", color: "#6c757d" },          // gris
-      timeout: { label: "Expiré", color: "#6f42c1" },          // violet
+      pending: { label: t("transactions.pending"), color: "#ffc107" },      // jaune
+      sent_to_user: { label: t("transactions.sent_to_user"), color: "#17a2b8" },          // bleu clair
+      processing: { label: t("transactions.processing"), color: "#fd7e14" },        // orange
+      completed: { label: t("transactions.completed"), color: "#28a745" },         // vert foncé
+      success: { label: t("transactions.success"), color: "#20c997" },          // turquoise
+      failed: { label: t("transactions.failed"), color: "#dc3545" },           // rouge
+      cancelled: { label: t("transactions.cancelled"), color: "#6c757d" },          // gris
+      timeout: { label: t("transactions.timeout"), color: "#6f42c1" },          // violet
+      confirmed: { label: t("transactions.confirmed"), color: "#007bff" },        // bleu
+      expired: { label: t("transactions.expired"), color: "#343a40" },           // noir/gris foncé
     }
 
     const info = statusMap[status] || { label: status, color: "#adb5bd" }
@@ -803,27 +805,33 @@ function TransactionsPageContent() {
             {/* Status Filter */}
             <Select value={statusFilter} onValueChange={handleStatusChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Filtrer par statut" />
+                <SelectValue placeholder={t("transactions.allStatuses")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous les statuts</SelectItem>
-                <SelectItem value="completed">Terminé</SelectItem>
-                <SelectItem value="pending">En attente</SelectItem>
-                <SelectItem value="failed">Échoué</SelectItem>
-                <SelectItem value="cancelled">Annulé</SelectItem>
+                <SelectItem value="all">{t("transactions.allStatuses")}</SelectItem>
+                <SelectItem value="pending">{t("transactions.pending")}</SelectItem>
+                <SelectItem value="sent_to_user">{t("transactions.sent_to_user")}</SelectItem>
+                <SelectItem value="processing">{t("transactions.processing")}</SelectItem>
+                <SelectItem value="completed">{t("transactions.completed")}</SelectItem>
+                <SelectItem value="success">{t("transactions.success")}</SelectItem>
+                <SelectItem value="failed">{t("transactions.failed")}</SelectItem>
+                <SelectItem value="cancelled">{t("transactions.cancelled")}</SelectItem>
+                <SelectItem value="timeout">{t("transactions.timeout")}</SelectItem>
+                <SelectItem value="confirmed">{t("transactions.confirmed")}</SelectItem>
+                <SelectItem value="expired">{t("transactions.expired")}</SelectItem>
               </SelectContent>
             </Select>
 
             {/* Type Filter */}
             <Select value={typeFilter} onValueChange={handleTypeChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Filtrer par type" />
+                <SelectValue placeholder={t("transactions.allTypes")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous les types</SelectItem>
-                <SelectItem value="deposit">Dépôt</SelectItem>
-                <SelectItem value="withdrawal">Retrait</SelectItem>
-                <SelectItem value="transfer">Transfert</SelectItem>
+                <SelectItem value="all">{t("transactions.allTypes")}</SelectItem>
+                <SelectItem value="deposit">{t("transactions.deposit")}</SelectItem>
+                <SelectItem value="withdrawal">{t("transactions.withdrawal")}</SelectItem>
+                <SelectItem value="transfer">{t("transactions.transfer")}</SelectItem>
               </SelectContent>
             </Select>
 
