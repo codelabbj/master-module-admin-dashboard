@@ -115,45 +115,56 @@ function BettingTransactionsPageContent() {
       setLoading(true)
       setError("")
       try {
+        const currentSearch = searchParams.get("search") || ""
+        const currentStatus = searchParams.get("status") || "all"
+        const currentType = searchParams.get("type") || "all"
+        const currentPlatform = searchParams.get("platform") || "all"
+        const currentCommission = searchParams.get("commission_paid") || "all"
+        const currentStart = searchParams.get("start_date") || ""
+        const currentEnd = searchParams.get("end_date") || ""
+        const currentPageVal = Number(searchParams.get("page")) || 1
+        const currentSort = searchParams.get("sort") || ""
+        const currentDirection = searchParams.get("direction") || "desc"
+
         const params = new URLSearchParams({
-          page: currentPage.toString(),
+          page: currentPageVal.toString(),
           page_size: itemsPerPage.toString(),
         })
 
-        if (searchTerm.trim() !== "") {
-          params.append("search", searchTerm)
+        if (currentSearch.trim() !== "") {
+          params.append("search", currentSearch)
         }
 
-        if (statusFilter !== "all") {
-          params.append("status", statusFilter)
+        if (currentStatus !== "all") {
+          params.append("status", currentStatus)
         }
 
-        if (transactionTypeFilter !== "all") {
-          params.append("transaction_type", transactionTypeFilter)
+        if (currentType !== "all") {
+          params.append("transaction_type", currentType)
         }
 
-        if (platformFilter !== "all") {
-          params.append("platform", platformFilter)
+        if (currentPlatform !== "all") {
+          params.append("platform", currentPlatform)
         }
 
-        if (commissionPaidFilter !== "all") {
-          params.append("commission_paid", commissionPaidFilter === "paid" ? "true" : "false")
+        if (currentCommission !== "all") {
+          params.append("commission_paid", currentCommission === "paid" ? "true" : "false")
         }
 
-        if (startDate) {
-          params.append("created_at__gte", `${startDate}T00:00:00Z`)
+        if (currentStart) {
+          params.append("created_at__gte", `${currentStart}T00:00:00Z`)
         }
-        if (endDate) {
-          params.append("created_at__lt", `${endDate}T23:59:59Z`)
+        if (currentEnd) {
+          params.append("created_at__lt", `${currentEnd}T23:59:59Z`)
         }
 
         let ordering = ""
-        if (sortField === "amount") {
-          ordering = `${sortDirection === "asc" ? "" : "-"}amount`
-        } else if (sortField === "partner_name") {
-          ordering = `${sortDirection === "asc" ? "" : "-"}partner_name`
-        } else if (sortField === "created_at") {
-          ordering = `${sortDirection === "asc" ? "" : "-"}created_at`
+        if (currentSort === "amount") {
+          ordering = `${currentDirection === "asc" ? "" : "-"}amount`
+        } else if (currentSort === "partner_name") {
+          ordering = `${currentDirection === "asc" ? "" : "-"}partner_name`
+        } else if (currentSort === "created_at") {
+          ordering = `${currentDirection === "asc" ? "" : "-"}created_at`
         } else {
           ordering = "-created_at"
         }

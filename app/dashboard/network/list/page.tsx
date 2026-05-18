@@ -13,7 +13,7 @@ import { useLanguage } from "@/components/providers/language-provider"
 import { Search, ArrowUpDown } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
-import { getImageUrl } from "@/lib/utils"
+import { getImageUrl, formatApiDateTime } from "@/lib/utils"
 
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
@@ -57,42 +57,43 @@ function NetworkListPageContent() {
       setLoading(true)
       setError("")
       try {
+        const currentSearch = searchParams.get("search") || ""
+        const currentStatus = searchParams.get("status") || "all"
+        const currentCountry = searchParams.get("country") || "all"
+        const currentStart = searchParams.get("start_date") || ""
+        const currentEnd = searchParams.get("end_date") || ""
+        const currentSort = searchParams.get("sort") || ""
+        const currentDirection = searchParams.get("direction") || "-"
+
         let endpoint = "";
-        if (searchTerm.trim() !== "" || statusFilter !== "all" || countryFilter !== "all" || sortField || startDate || endDate) {
-          const params = new URLSearchParams({
-            page: "1",
-            page_size: "100",
-          });
-          if (searchTerm.trim() !== "") {
-            params.append("search", searchTerm);
-          }
-          if (statusFilter !== "all") {
-            params.append("is_active", statusFilter === "active" ? "true" : "false");
-          }
-          if (countryFilter !== "all") {
-            params.append("country", countryFilter);
-          }
-          if (startDate) {
-            params.append("created_at__gte", startDate);
-          }
-          if (endDate) {
-            // Add one day to end date to include the entire end date
-            const endDateObj = new Date(endDate);
-            endDateObj.setDate(endDateObj.getDate() + 1);
-            params.append("created_at__lt", endDateObj.toISOString().split('T')[0]);
-          }
-          if (sortField) {
-            params.append("ordering", `${sortDirection === "+" ? "+" : "-"}${sortField}`);
-          }
-          const query = params.toString().replace(/ordering=%2B/g, "ordering=+");
-          endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/networks/?${query}`;
-        } else {
-          const params = new URLSearchParams({
-            page: "1",
-            page_size: "100",
-          });
-          endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/networks/?${params.toString()}`;
+        const params = new URLSearchParams({
+          page: "1",
+          page_size: "100",
+        });
+        if (currentSearch.trim() !== "") {
+          params.append("search", currentSearch);
         }
+        if (currentStatus !== "all") {
+          params.append("is_active", currentStatus === "active" ? "true" : "false");
+          params.append("status", currentStatus);
+        }
+        if (currentCountry !== "all") {
+          params.append("country", currentCountry);
+        }
+        if (currentStart) {
+          params.append("created_at__gte", currentStart);
+        }
+        if (currentEnd) {
+          const endDateObj = new Date(currentEnd);
+          endDateObj.setDate(endDateObj.getDate() + 1);
+          params.append("created_at__lt", endDateObj.toISOString().split('T')[0]);
+        }
+        if (currentSort) {
+          params.append("ordering", `${currentDirection === "+" ? "+" : "-"}${currentSort}`);
+        }
+        const query = params.toString().replace(/ordering=%2B/g, "ordering=+");
+        endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/networks/?${query}`;
+        
         const data = await apiFetch(endpoint)
         setNetworks(Array.isArray(data) ? data : data.results || [])
         toast({
@@ -114,6 +115,15 @@ function NetworkListPageContent() {
       }
     }
     
+    // Sync state
+    setSearchTerm(searchParams.get("search") || "")
+    setStatusFilter(searchParams.get("status") || "all")
+    setCountryFilter(searchParams.get("country") || "all")
+    setStartDate(searchParams.get("start_date") || "")
+    setEndDate(searchParams.get("end_date") || "")
+    setSortField((searchParams.get("sort") as any) || null)
+    setSortDirection((searchParams.get("direction") as "+" | "-") || "-")
+
     fetchNetworks()
   }, [searchParams, apiFetch, toast, t])
 
@@ -270,10 +280,13 @@ function NetworkListPageContent() {
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                   </Button>
                 </TableHead>
+                <TableHead>{t("network.ussdBaseCode") || "USSD Base Code"}</TableHead>
                 <TableHead>{t("network.country")}</TableHead>
                 <TableHead>{t("network.status")}</TableHead>
                 <TableHead>{t("network.sentDepositToModule") || "Sent deposit to module"}</TableHead>
                 <TableHead>{t("network.sentWithdrawalToModule") || "Sent withdrawal to module"}</TableHead>
+                <TableHead>{t("network.createdAt") || "Created At"}</TableHead>
+                <TableHead>{t("network.updatedAt") || "Updated At"}</TableHead>
                 <TableHead>{t("network.actions")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -307,6 +320,7 @@ function NetworkListPageContent() {
                   </TableCell>
                   <TableCell>{network.nom}</TableCell>
                   <TableCell>{network.code}</TableCell>
+                  <TableCell className="font-mono text-sm">{network.ussd_base_code || "-"}</TableCell>
                   <TableCell>{network.country_name || network.country}</TableCell>
                   <TableCell>{network.is_active ? t("network.active") : t("network.inactive")}</TableCell>
                   <TableCell>
@@ -322,6 +336,12 @@ function NetworkListPageContent() {
                     ) : (
                       <img src="/icon-no.svg" alt="No" className="h-4 w-4" />
                     )}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground font-mono">
+                    {network.created_at ? formatApiDateTime(network.created_at) : "-"}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground font-mono">
+                    {network.updated_at ? formatApiDateTime(network.updated_at) : "-"}
                   </TableCell>
                   <TableCell>
                     <Link href={`/dashboard/network/edit/${network.uid}`}><Button size="sm">{t("network.editButton")}</Button></Link>

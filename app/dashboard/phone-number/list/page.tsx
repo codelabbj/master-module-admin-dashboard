@@ -10,6 +10,7 @@ import { Search, ArrowUpDown } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
+import { Badge } from "@/components/ui/badge"
 
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
@@ -240,14 +241,34 @@ export default function PhoneNumberListPage() {
                   </Button>
                 </TableHead>
                 <TableHead>{t("phoneNumbers.fullName")}</TableHead>
+                <TableHead>{t("phoneNumbers.countryCode")}</TableHead>
+                <TableHead>{t("phoneNumbers.status")}</TableHead>
+                <TableHead>{t("phoneNumbers.createdAt")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredNumbers.map((num: any) => (
-                <TableRow key={num.uid}>
-                  <TableCell>{num.phone_number}</TableCell>
-                  <TableCell>{num.network_name}</TableCell>
+                <TableRow key={num.uid} className="hover:bg-accent/20">
+                  <TableCell className="font-mono">{num.phone_number}</TableCell>
+                  <TableCell>{num.network_name || num.network || '-'}</TableCell>
                   <TableCell>{num.full_name || '-'}</TableCell>
+                  <TableCell>
+                    {num.country_code ? (
+                      <span className="px-2 py-1 bg-secondary text-secondary-foreground rounded text-xs font-semibold">
+                        {num.country_code}
+                      </span>
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={num.is_active ? "success" : "destructive"}>
+                      {num.is_active ? t("phoneNumbers.active") : t("phoneNumbers.inactive")}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {num.created_at ? new Date(num.created_at).toLocaleString() : '-'}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

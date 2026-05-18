@@ -135,37 +135,48 @@ function PartnerPageContent() {
 			setLoading(true)
 			setError("")
 			try {
+				const currentSearch = searchParams.get("search") || ""
+				const currentStatus = searchParams.get("status") || "all"
+				const currentMomo = searchParams.get("momo") || "all"
+				const currentMobcash = searchParams.get("mobcash") || "all"
+				const currentBulk = searchParams.get("bulk_payment") || "all"
+				const currentStart = searchParams.get("start_date") || ""
+				const currentEnd = searchParams.get("end_date") || ""
+				const currentPageVal = Number(searchParams.get("page")) || 1
+				const currentSort = searchParams.get("sort") || ""
+				const currentDirection = searchParams.get("direction") || "desc"
+
 				const params = new URLSearchParams({
-					page: currentPage.toString(),
+					page: currentPageVal.toString(),
 					page_size: itemsPerPage.toString(),
 				})
-				if (searchTerm.trim() !== "") {
-					params.append("search", searchTerm)
+				if (currentSearch.trim() !== "") {
+					params.append("search", currentSearch)
 				}
-			if (statusFilter !== "all") {
-				params.append("is_active", statusFilter === "active" ? "true" : "false")
-			}
-			if (momoFilter !== "all") {
-				params.append("can_process_momo", momoFilter)
-			}
-			if (mobcashFilter !== "all") {
-				params.append("can_process_mobcash", mobcashFilter)
-			}
-			if (bulkPaymentFilter !== "all") {
-				params.append("can_process_bulk_payment", bulkPaymentFilter)
-			}
-			if (startDate) {
-				params.append("created_at__gte", startDate)
-			}
-			if (endDate) {
-				// Add one day to end date to include the entire end date
-				const endDateObj = new Date(endDate)
-				endDateObj.setDate(endDateObj.getDate() + 1)
-				params.append("created_at__lt", endDateObj.toISOString().split('T')[0])
-			}
-			const orderingParam = sortField
-				? `&ordering=${(sortDirection === "asc" ? "+" : "-")}${sortField}`
-				: ""
+				if (currentStatus !== "all") {
+					params.append("is_active", currentStatus === "active" ? "true" : "false")
+					params.append("status", currentStatus)
+				}
+				if (currentMomo !== "all") {
+					params.append("can_process_momo", currentMomo)
+				}
+				if (currentMobcash !== "all") {
+					params.append("can_process_mobcash", currentMobcash)
+				}
+				if (currentBulk !== "all") {
+					params.append("can_process_bulk_payment", currentBulk)
+				}
+				if (currentStart) {
+					params.append("created_at__gte", currentStart)
+				}
+				if (currentEnd) {
+					const endDateObj = new Date(currentEnd)
+					endDateObj.setDate(endDateObj.getDate() + 1)
+					params.append("created_at__lt", endDateObj.toISOString().split('T')[0])
+				}
+				const orderingParam = currentSort
+					? `&ordering=${(currentDirection === "asc" ? "+" : "-")}${currentSort}`
+					: ""
 				const endpoint = `${baseUrl.replace(/\/$/, "")}/api/auth/admin/users/partners/?${params.toString()}${orderingParam}`
 				const data = await apiFetch(endpoint)
 				setPartners(data.partners || [])

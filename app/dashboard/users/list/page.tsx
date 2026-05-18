@@ -128,44 +128,47 @@ function UsersPageContent() {
       setLoading(true);
       setError("");
       try {
+        const currentSearch = searchParams.get("search") || "";
+        const currentStatus = searchParams.get("status") || "all";
+        const currentStart = searchParams.get("start_date") || "";
+        const currentEnd = searchParams.get("end_date") || "";
+        const currentPageVal = Number(searchParams.get("page")) || 1;
+        const currentSort = searchParams.get("sort") || "";
+        const currentDirection = searchParams.get("direction") || "desc";
+        const currentView = searchParams.get("view") || "all";
+
         let endpoint = "";
-        if (searchTerm.trim() !== "" || statusFilter !== "all" || sortField || startDate || endDate) {
-          const params = new URLSearchParams({
-            page: currentPage.toString(),
-            page_size: itemsPerPage.toString(),
-          });
-          if (searchTerm.trim() !== "") {
-            params.append("search", searchTerm);
-          }
-          if (statusFilter !== "all") {
-            params.append("status", statusFilter);
-          }
-          if (startDate) {
-            params.append("created_at__gte", startDate);
-          }
-          if (endDate) {
-            // Add one day to end date to include the entire end date
-            const endDateObj = new Date(endDate);
-            endDateObj.setDate(endDateObj.getDate() + 1);
-            params.append("created_at__lt", endDateObj.toISOString().split('T')[0]);
-          }
-          const orderingParam = sortField
-            ? `&ordering=${(sortDirection === "asc" ? "+" : "-")}${(sortField === "display_name" ? "display_name" : sortField)}`
-            : "";
-          endpoint =
-            viewType === "pending"
-              ? `${baseUrl}/api/auth/admin/users/pending/?${params.toString()}${orderingParam}`
-              : `${baseUrl}/api/auth/admin/users/?${params.toString()}${orderingParam}`;
-        } else {
-          const params = new URLSearchParams({
-            page: currentPage.toString(),
-            page_size: itemsPerPage.toString(),
-          });
-          endpoint =
-            viewType === "pending"
-              ? `${baseUrl}/api/auth/admin/users/pending/?${params.toString()}`
-              : `${baseUrl}/api/auth/admin/users/?${params.toString()}`;
+        const params = new URLSearchParams({
+          page: currentPageVal.toString(),
+          page_size: itemsPerPage.toString(),
+        });
+        if (currentSearch.trim() !== "") {
+          params.append("search", currentSearch);
         }
+        if (currentStatus !== "all") {
+          params.append("status", currentStatus);
+          if (currentStatus === "active") {
+            params.append("is_active", "true");
+          } else if (currentStatus === "inactive") {
+            params.append("is_active", "false");
+          }
+        }
+        if (currentStart) {
+          params.append("created_at__gte", currentStart);
+        }
+        if (currentEnd) {
+          // Add one day to end date to include the entire end date
+          const endDateObj = new Date(currentEnd);
+          endDateObj.setDate(endDateObj.getDate() + 1);
+          params.append("created_at__lt", endDateObj.toISOString().split('T')[0]);
+        }
+        const orderingParam = currentSort
+          ? `&ordering=${(currentDirection === "asc" ? "+" : "-")}${(currentSort === "display_name" ? "display_name" : currentSort)}`
+          : "";
+        endpoint =
+          currentView === "pending"
+            ? `${baseUrl}/api/auth/admin/users/pending/?${params.toString()}${orderingParam}`
+            : `${baseUrl}/api/auth/admin/users/?${params.toString()}${orderingParam}`;
         console.log("User API endpoint:", endpoint);
         const data = await apiFetch(endpoint);
         console.log("API response data:", data);

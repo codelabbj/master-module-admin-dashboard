@@ -81,11 +81,24 @@ function DevicesListPageContent() {
       setLoading(true)
       setError("")
       try {
+        const currentSearch = searchParams.get("search") || ""
+        const currentStatus = searchParams.get("status") || "all"
+        const currentSort = searchParams.get("sort") || ""
+        const currentDirection = searchParams.get("direction") || "-"
+        const currentPageVal = Number(searchParams.get("page")) || 1
+
         const params = new URLSearchParams({
-          page: currentPage.toString(),
+          page: currentPageVal.toString(),
           page_size: itemsPerPage.toString(),
         })
-        if (searchTerm) params.append("search", searchTerm)
+        if (currentSearch) params.append("search", currentSearch)
+        if (currentStatus !== "all") {
+          params.append("is_online", currentStatus === "online" ? "true" : "false")
+          params.append("status", currentStatus)
+        }
+        if (currentSort) {
+          params.append("ordering", `${currentDirection === "+" ? "+" : "-"}${currentSort}`)
+        }
 
         const data = await apiFetch(`${baseUrl}/api/payments/stats/devices/?${params.toString()}`)
         const devicesData = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : []
@@ -110,8 +123,15 @@ function DevicesListPageContent() {
       }
     }
 
+    // Sync state
+    setSearchTerm(searchParams.get("search") || "")
+    setStatusFilter(searchParams.get("status") || "all")
+    setSortField((searchParams.get("sort") as any) || null)
+    setSortDirection((searchParams.get("direction") as "+" | "-") || "-")
+    setCurrentPage(Number(searchParams.get("page")) || 1)
+
     fetchDevices()
-  }, [searchParams, statusFilter, sortField, sortDirection, itemsPerPage, apiFetch, toast, t])
+  }, [searchParams, itemsPerPage, apiFetch, toast, t])
 
   // Handle WebSocket messages for real-time updates
   useEffect(() => {
@@ -131,25 +151,7 @@ function DevicesListPageContent() {
     }
   }, [lastMessage])
 
-  const filteredDevices = useMemo(() => {
-    let filtered = devices
-
-    if (searchTerm) {
-      filtered = filtered.filter(device =>
-        Object.values(device).some(value =>
-          value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      )
-    }
-
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(device =>
-        statusFilter === "online" ? device.is_online : !device.is_online
-      )
-    }
-
-    return filtered
-  }, [devices, searchTerm, statusFilter])
+  const filteredDevices = devices
 
   const handleSort = (field: "name" | "is_online") => {
     if (sortField === field) {

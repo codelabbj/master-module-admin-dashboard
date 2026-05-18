@@ -46,6 +46,7 @@ export default function AggregatorAuthorizationsPage() {
     const apiFetch = useApi()
     const { t } = useLanguage()
     const [filterUser, setFilterUser] = useState("all")
+    const [filterStatus, setFilterStatus] = useState("all")
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
     const fetchData = async () => {
@@ -53,6 +54,9 @@ export default function AggregatorAuthorizationsPage() {
         setError("")
         const queryParams = new URLSearchParams()
         if (filterUser && filterUser !== "all") queryParams.append("user", filterUser)
+        if (filterStatus && filterStatus !== "all") {
+            queryParams.append("is_active", filterStatus === "active" ? "true" : "false")
+        }
 
         try {
             const [authData, userData, networkData] = await Promise.all([
@@ -72,7 +76,7 @@ export default function AggregatorAuthorizationsPage() {
 
     useEffect(() => {
         fetchData()
-    }, [apiFetch, filterUser])
+    }, [apiFetch, filterUser, filterStatus])
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -190,7 +194,20 @@ export default function AggregatorAuthorizationsPage() {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <Button variant="outline" onClick={() => setFilterUser("all")} className="flex gap-2">
+                        <div className="w-full md:w-48 space-y-2">
+                            <label className="text-sm font-medium text-slate-500">Statut</label>
+                            <Select value={filterStatus} onValueChange={setFilterStatus}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Tous" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Tous</SelectItem>
+                                    <SelectItem value="active">Actif</SelectItem>
+                                    <SelectItem value="inactive">Inactif</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <Button variant="outline" onClick={() => { setFilterUser("all"); setFilterStatus("all"); }} className="flex gap-2">
 
                             <X size={16} /> {t("common.clear")}
                         </Button>

@@ -55,11 +55,18 @@ function AggregatorTransactionsPageContent() {
         setLoading(true)
         setError("")
         const queryParams = new URLSearchParams()
-        if (filters.status) queryParams.append("status", filters.status)
-        if (filters.type) queryParams.append("type", filters.type)
-        if (filters.user) queryParams.append("user", filters.user)
-        if (filters.date_from) queryParams.append("date_from", filters.date_from)
-        if (filters.date_to) queryParams.append("date_to", filters.date_to)
+        
+        const currentStatus = searchParams.get("status") || ""
+        const currentType = searchParams.get("type") || ""
+        const currentUser = searchParams.get("user") || ""
+        const currentDateFrom = searchParams.get("date_from") || ""
+        const currentDateTo = searchParams.get("date_to") || ""
+
+        if (currentStatus) queryParams.append("status", currentStatus)
+        if (currentType) queryParams.append("type", currentType)
+        if (currentUser) queryParams.append("user", currentUser)
+        if (currentDateFrom) queryParams.append("date_from", currentDateFrom)
+        if (currentDateTo) queryParams.append("date_to", currentDateTo)
 
         try {
             const data = await apiFetch(`${baseUrl}/api/aggregator/admin/transactions/?${queryParams.toString()}`)
@@ -152,7 +159,7 @@ function AggregatorTransactionsPageContent() {
                     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-500">{t("common.status")}</label>
-                            <Select onValueChange={(v) => updateUrl({ status: v === "all" ? null : v })}>
+                            <Select value={filters.status || "all"} onValueChange={(v) => updateUrl({ status: v === "all" ? null : v })}>
                                 <SelectTrigger>
                                     <SelectValue placeholder={t("common.allStatuses")} />
                                 </SelectTrigger>
@@ -168,7 +175,7 @@ function AggregatorTransactionsPageContent() {
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-500">{t("common.type")}</label>
-                            <Select onValueChange={(v) => setFilters({ ...filters, type: v === "all" ? "" : v })}>
+                            <Select value={filters.type || "all"} onValueChange={(v) => updateUrl({ type: v === "all" ? null : v })}>
                                 <SelectTrigger>
                                     <SelectValue placeholder={t("common.allTypes")} />
                                 </SelectTrigger>
@@ -181,11 +188,11 @@ function AggregatorTransactionsPageContent() {
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-500">{t("common.fromDate")}</label>
-                            <Input type="date" onChange={(e) => setFilters({ ...filters, date_from: e.target.value })} />
+                            <Input type="date" value={filters.date_from || ""} onChange={(e) => updateUrl({ date_from: e.target.value })} />
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-500">{t("common.toDate")}</label>
-                            <Input type="date" onChange={(e) => setFilters({ ...filters, date_to: e.target.value })} />
+                            <Input type="date" value={filters.date_to || ""} onChange={(e) => updateUrl({ date_to: e.target.value })} />
                         </div>
                         <div className="flex items-end">
                             <Button variant="outline" className="w-full flex gap-2" onClick={fetchTransactions}>

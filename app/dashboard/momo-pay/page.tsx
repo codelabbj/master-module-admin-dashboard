@@ -132,38 +132,48 @@ function MomoPayTransactionsContent() {
       setLoading(true)
       setError("")
       try {
+        const currentSearch = searchParams.get("reference") || ""
+        const currentStatus = searchParams.get("status") || "all"
+        const currentPhone = searchParams.get("phone") || ""
+        const currentType = searchParams.get("payment_type") || "all"
+        const currentExpired = searchParams.get("include_expired") === "true"
+        const currentStart = searchParams.get("start_date") || ""
+        const currentEnd = searchParams.get("end_date") || ""
+        const currentPageVal = Number(searchParams.get("page")) || 1
+        const currentSort = searchParams.get("sort") || ""
+        const currentDirection = searchParams.get("direction") || "desc"
+
         const params = new URLSearchParams({
-          page: currentPage.toString(),
+          page: currentPageVal.toString(),
           page_size: itemsPerPage.toString(),
         })
 
-        if (searchTerm.trim() !== "") {
-          params.append("reference", searchTerm)
+        if (currentSearch.trim() !== "") {
+          params.append("reference", currentSearch)
         }
-        if (statusFilter !== "all") {
-          params.append("status", statusFilter)
+        if (currentStatus !== "all") {
+          params.append("status", currentStatus)
         }
-        if (phoneFilter.trim() !== "") {
-          params.append("phone", phoneFilter)
+        if (currentPhone.trim() !== "") {
+          params.append("phone", currentPhone)
         }
-        if (paymentTypeFilter !== "all") {
-          params.append("payment_type", paymentTypeFilter)
+        if (currentType !== "all") {
+          params.append("payment_type", currentType)
         }
-        if (includeExpired) {
+        if (currentExpired) {
           params.append("include_expired", "true")
         }
-        if (startDate) {
-          params.append("created_at__gte", startDate)
+        if (currentStart) {
+          params.append("created_at__gte", currentStart)
         }
-        if (endDate) {
-          // Add one day to end date to include the entire end date
-          const endDateObj = new Date(endDate)
+        if (currentEnd) {
+          const endDateObj = new Date(currentEnd)
           endDateObj.setDate(endDateObj.getDate() + 1)
           params.append("created_at__lt", endDateObj.toISOString().split('T')[0])
         }
 
-        const orderingParam = sortField
-          ? `&ordering=${(sortDirection === "asc" ? "" : "-")}${sortField}`
+        const orderingParam = currentSort
+          ? `&ordering=${(currentDirection === "asc" ? "" : "-")}${currentSort}`
           : ""
 
         const endpoint = `${baseUrl}/api/payments/momo-pay-transactions/?${params.toString()}${orderingParam}`

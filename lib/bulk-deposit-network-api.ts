@@ -9,8 +9,10 @@ export interface BulkDepositNetwork {
     created_at: string;
     // Extra fields that could be populated from backend
     user_email?: string;
+    user_phone?: string;
     user_display_name?: string;
     network_name?: string;
+    updated_at?: string;
 }
 
 export interface BulkDepositNetworkListResponse {

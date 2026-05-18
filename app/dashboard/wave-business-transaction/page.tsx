@@ -134,15 +134,19 @@ function WaveBusinessTransactionPageContent() {
     setLoading(true)
     setError("")
     try {
+      const currentSearch = searchParams.get("search") || ""
+      const currentStatus = searchParams.get("status") || "all"
+      const currentPageVal = Number(searchParams.get("page")) || 1
+
       const params = new URLSearchParams({
-        page: currentPage.toString(),
+        page: currentPageVal.toString(),
         page_size: "10",
       })
-      if (searchTerm.trim() !== "") {
-        params.append("search", searchTerm)
+      if (currentSearch.trim() !== "") {
+        params.append("search", currentSearch)
       }
-      if (statusFilter !== "all") {
-        params.append("status", statusFilter)
+      if (currentStatus !== "all") {
+        params.append("status", currentStatus)
       }
 
       const endpoint = `${baseUrl}/api/payments/wave-business-transactions/?${params.toString()}`

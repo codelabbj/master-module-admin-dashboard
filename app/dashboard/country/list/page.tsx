@@ -26,6 +26,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
 import { Badge } from "@/components/ui/badge"
+import { formatApiDateTime } from "@/lib/utils"
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
@@ -63,7 +64,17 @@ function CountryListPageContent() {
       setLoading(true)
       setError("")
       try {
-        const data = await apiFetch(`${baseUrl}/api/payments/countries/`)
+        const currentSearch = searchParams.get("search") || ""
+        const currentStatus = searchParams.get("status") || "all"
+
+        const params = new URLSearchParams()
+        if (currentSearch) params.append("search", currentSearch)
+        if (currentStatus !== "all") {
+          params.append("is_active", currentStatus === "active" ? "true" : "false")
+          params.append("status", currentStatus)
+        }
+
+        const data = await apiFetch(`${baseUrl}/api/payments/countries/?${params.toString()}`)
         const countriesData = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : []
         setCountries(countriesData)
         toast({
@@ -82,6 +93,10 @@ function CountryListPageContent() {
         setLoading(false)
       }
     }
+
+    // Sync state
+    setSearchTerm(searchParams.get("search") || "")
+    setStatusFilter(searchParams.get("status") || "all")
 
     fetchCountries()
   }, [searchParams, apiFetch, toast, t])
@@ -239,9 +254,11 @@ function CountryListPageContent() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="font-semibold">Pays</TableHead>
-                    <TableHead className="font-semibold">Code</TableHead>
-                    <TableHead className="font-semibold">Statut</TableHead>
+                    <TableHead className="font-semibold">{t("country.nom") || "Pays"}</TableHead>
+                    <TableHead className="font-semibold">{t("country.code") || "Code"}</TableHead>
+                    <TableHead className="font-semibold">{t("country.status") || "Statut"}</TableHead>
+                    <TableHead className="font-semibold">{t("country.createdAt") || "Créé le"}</TableHead>
+                    <TableHead className="font-semibold">{t("country.updatedAt") || "Mis à jour le"}</TableHead>
                     <TableHead className="font-semibold text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -272,8 +289,14 @@ function CountryListPageContent() {
                         <Badge 
                           variant={country.is_active ? "default" : "secondary"}
                         >
-                          {country.is_active ? 'Actif' : 'Inactif'}
+                          {country.is_active ? (t("country.active") || 'Actif') : (t("country.inactive") || 'Inactif')}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground font-mono">
+                        {country.created_at ? formatApiDateTime(country.created_at) : "-"}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground font-mono">
+                        {country.updated_at ? formatApiDateTime(country.updated_at) : "-"}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">

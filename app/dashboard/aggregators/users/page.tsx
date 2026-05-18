@@ -284,62 +284,156 @@ function AggregatorUsersPageContent() {
                   <TableRow>
                     <TableHead className="font-semibold">{t("common.user") || "User"}</TableHead>
                     <TableHead className="font-semibold">{t("common.contact") || "Contact"}</TableHead>
+                    <TableHead className="font-semibold">{t("aggregators.users.capabilities") || "Capabilities"}</TableHead>
                     <TableHead className="font-semibold">{t("common.balance") || "Balance"}</TableHead>
+                    <TableHead className="font-semibold">{t("aggregators.users.webhookUrl") || "Webhook URL"}</TableHead>
                     <TableHead className="font-semibold">{t("common.status") || "Status"}</TableHead>
-                    <TableHead className="font-semibold">{t("common.createdAt") || "Created At"}</TableHead>
                     <TableHead className="font-semibold text-right">{t("common.actions") || "Actions"}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredAggregators.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                         {t("aggregators.noAggregatorsFound") || "No aggregator users found"}
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredAggregators.map((agg) => (
                       <TableRow key={agg.uid} className="hover:bg-accent/50">
+                        {/* User Column */}
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                               <Users className="h-5 w-5 text-primary" />
                             </div>
-                            <div>
+                            <div className="space-y-1">
                               <div className="font-medium text-foreground">
-                                {agg.display_name || "N/A"}
+                                {agg.display_name || `${agg.first_name} ${agg.last_name}`.trim() || "N/A"}
                               </div>
-                              <div className="text-xs text-muted-foreground font-mono">
-                                UID: {agg.uid.substring(0, 8)}...
+                              <div className="text-[10px] text-muted-foreground font-mono">
+                                UID: {agg.uid}
+                              </div>
+                              <div className="flex flex-wrap gap-1 mt-0.5">
+                                {agg.is_staff && (
+                                  <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 rounded text-[10px] font-semibold">
+                                    {t("aggregators.users.staff") || "Staff"}
+                                  </span>
+                                )}
+                                {agg.is_partner && (
+                                  <span className="px-1.5 py-0.5 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded text-[10px] font-semibold">
+                                    {t("aggregators.users.partner") || "Partner"}
+                                  </span>
+                                )}
+                                {agg.is_aggregator && (
+                                  <span className="px-1.5 py-0.5 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded text-[10px] font-semibold">
+                                    {t("aggregators.users.aggregator") || "Aggregator"}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
                         </TableCell>
+
+                        {/* Contact Column */}
                         <TableCell>
-                          <div className="text-sm text-foreground">
-                            {agg.email || "N/A"}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {agg.phone || t("aggregators.hasNoPhone") || "No phone"}
+                          <div className="space-y-1">
+                            {/* Email */}
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm text-foreground truncate max-w-[180px]">{agg.email || "N/A"}</span>
+                              {agg.email && (
+                                <span className={`h-2 w-2 rounded-full shrink-0 ${agg.email_verified ? 'bg-green-500' : 'bg-red-500'}`} 
+                                      title={agg.email_verified ? t("aggregators.users.emailVerified") || "Email Verified" : t("aggregators.users.emailUnverified") || "Email Unverified"} 
+                                />
+                              )}
+                            </div>
+                            {/* Phone */}
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <span className="font-mono">{agg.phone || t("aggregators.hasNoPhone") || "No phone"}</span>
+                              {agg.phone && (
+                                <span className={`h-2 w-2 rounded-full shrink-0 ${agg.phone_verified ? 'bg-green-500' : 'bg-red-500'}`} 
+                                      title={agg.phone_verified ? t("aggregators.users.phoneVerified") || "Phone Verified" : t("aggregators.users.phoneUnverified") || "Phone Unverified"} 
+                                />
+                              )}
+                            </div>
+                            {/* Preferred contact method */}
+                            <div className="text-[10px] text-muted-foreground">
+                              <span className="font-semibold">{t("aggregators.users.contactMethod") || "Contact"}: </span>
+                              <span className="capitalize">{agg.contact_method || "-"}</span>
+                            </div>
                           </div>
                         </TableCell>
+
+                        {/* Capabilities Column */}
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1 max-w-[180px]">
+                            {agg.can_process_momo && (
+                              <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900 rounded text-[10px] font-semibold">
+                                MoMo
+                              </span>
+                            )}
+                            {agg.can_process_ussd_transaction && (
+                              <span className="px-1.5 py-0.5 bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-900 rounded text-[10px] font-semibold">
+                                USSD
+                              </span>
+                            )}
+                            {agg.can_process_mobcash && (
+                              <span className="px-1.5 py-0.5 bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400 border border-purple-200 dark:border-purple-900 rounded text-[10px] font-semibold">
+                                Mobcash
+                              </span>
+                            )}
+                            {agg.can_process_bulk_payment && (
+                              <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900 rounded text-[10px] font-semibold">
+                                Bulk Payment
+                              </span>
+                            )}
+                            {!agg.can_process_momo && !agg.can_process_ussd_transaction && !agg.can_process_mobcash && !agg.can_process_bulk_payment && (
+                              <span className="text-xs text-muted-foreground">-</span>
+                            )}
+                          </div>
+                        </TableCell>
+
+                        {/* Balance Column */}
                         <TableCell>
                           <div className="font-semibold text-primary">
                             {agg.account_balance?.toLocaleString("en-GB")} {agg.account_currency}
                           </div>
                         </TableCell>
+
+                        {/* Webhook & Login Column */}
                         <TableCell>
-                          <Badge 
-                            variant={agg.is_active ? "default" : "secondary"}
-                          >
-                            {agg.is_active ? (t("common.active") || 'Active') : (t("common.inactive") || 'Inactive')}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm text-muted-foreground">
-                            {formatApiDateTime(agg.created_at)}
+                          <div className="space-y-1">
+                            <div className="text-xs">
+                              {agg.webhook_url ? (
+                                <span className="font-mono text-muted-foreground truncate block max-w-[150px] hover:text-foreground cursor-help" title={agg.webhook_url}>
+                                  {agg.webhook_url}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground/60 italic">{t("aggregators.users.noWebhook") || "No Webhook"}</span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                              <span className="font-semibold">{t("aggregators.users.lastLogin") || "Last Login"}: </span>
+                              <span>{agg.last_login_at ? formatApiDateTime(agg.last_login_at) : "Never"}</span>
+                            </div>
                           </div>
                         </TableCell>
+
+                        {/* Status Column */}
+                        <TableCell>
+                          <div className="space-y-1">
+                            <Badge 
+                              variant={agg.is_active ? "success" : "destructive"}
+                            >
+                              {agg.is_active ? (t("common.active") || 'Active') : (t("common.inactive") || 'Inactive')}
+                            </Badge>
+                            <div className="text-[10px] text-muted-foreground font-mono">
+                              {formatApiDateTime(agg.created_at)}
+                            </div>
+                          </div>
+                        </TableCell>
+
+                        {/* Actions Column */}
                         <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>

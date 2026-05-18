@@ -147,30 +147,47 @@ export default function BulkDepositNetworksPage() {
                                     <TableRow>
                                         <TableHead>{t("bulkDepositNetworks.user")}</TableHead>
                                         <TableHead>{t("bulkDepositNetworks.network")}</TableHead>
+                                        <TableHead>{t("common.identifiers") || "Identifiers"}</TableHead>
                                         <TableHead>{t("bulkDepositNetworks.createdAt")}</TableHead>
+                                        <TableHead>{t("bulkDepositNetworks.updatedAt")}</TableHead>
                                         <TableHead className="text-right">{t("bulkDepositNetworks.status")}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {networks.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                                                 {t("bulkDepositNetworks.noAuthorizationsFound")}
                                             </TableCell>
                                         </TableRow>
                                     ) : (
                                         networks.map((net) => (
-                                            <TableRow key={net.uid}>
+                                            <TableRow key={net.uid} className="hover:bg-accent/20">
                                                 <TableCell>
-                                                    <div className="font-medium">{net.user_display_name || net.user}</div>
-                                                    <div className="text-xs text-muted-foreground">{net.user_email}</div>
-                                                    <div className="text-xs text-muted-foreground">{net.user}</div>
+                                                    <div className="font-semibold text-foreground">{net.user_display_name || '-'}</div>
+                                                    {net.user_email && <div className="text-xs text-muted-foreground">{net.user_email}</div>}
+                                                    {net.user_phone && <div className="text-xs text-muted-foreground font-mono mt-0.5">{net.user_phone}</div>}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="font-medium">{net.network_name || net.network}</div>
-                                                    <div className="text-xs text-muted-foreground">{net.network}</div>
+                                                    <div className="font-semibold text-foreground">{net.network_name || '-'}</div>
                                                 </TableCell>
-                                                <TableCell>{formatApiDateTime(net.created_at)}</TableCell>
+                                                <TableCell>
+                                                    <div className="text-[10px] font-mono text-muted-foreground">
+                                                        <span className="font-semibold mr-1">Auth:</span>{net.uid}
+                                                    </div>
+                                                    <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
+                                                        <span className="font-semibold mr-1">User:</span>{net.user}
+                                                    </div>
+                                                    <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
+                                                        <span className="font-semibold mr-1">Net:</span>{net.network}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-xs text-muted-foreground font-mono">
+                                                    {formatApiDateTime(net.created_at)}
+                                                </TableCell>
+                                                <TableCell className="text-xs text-muted-foreground font-mono">
+                                                    {net.updated_at ? formatApiDateTime(net.updated_at) : '-'}
+                                                </TableCell>
                                                 <TableCell className="text-right">
                                                     <Switch
                                                         checked={net.is_active}
